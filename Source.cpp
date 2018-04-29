@@ -6,7 +6,7 @@
 
 int map[MAP_HEIGHT_SIZE + 1][MAP_WIDTH_SIZE + 1];					// Coonect 4 는 map은 가로 7칸 세로 6칸의 7 by 6 짜리 게임
 
-int STONE_COLOR = 1;												// 현재 어떤 색이 착수할 차례인지 (1==● 2==○)
+int STONE_COLOR = 1;												// 현재 어떤 색이 착수할 차례인지 (1==○ 2==●)
 																	// !**선/후공 나누는 구현 필요**!
 
 int game_length;													// 몇개의 착수가 이뤄졌는지
@@ -66,7 +66,7 @@ void select_play_method() {															// 작수 방식 결정
 	do {
 		printf("착수 방식을 선택해주세요. (1. Search Algorithm, 2. Rule Base, 3. 직접 입력)\n");
 		char input_play_method;
-		scanf("%c", &input_play_method);
+		scanf("%s", &input_play_method);
 		if (input_play_method == '1') {
 			printf("Search Algorithm에 기반하여 착수합니다.\n");
 			
@@ -83,7 +83,7 @@ void select_play_method() {															// 작수 방식 결정
 		}
 		else if (input_play_method == '3') {
 			printf("착수할 지점의 번호(1~7)를 입력해주세요.\n");
-			getchar();
+//			getchar();
 			char input_stone_location;
 			do {
 				printf("착수 지점 : ");
@@ -174,11 +174,11 @@ void print_current_map() {
 			if (map[i][j] == 0) {				// 빈칸
 				printf(" . ");
 			}
-			else if (map[i][j] == 1) {			// 흑●
-				printf("● ");
-			}
-			else if (map[i][j] == 2) {			// 백○
+			else if (map[i][j] == 1) {			// 흑○
 				printf("○ ");
+			}
+			else if (map[i][j] == 2) {			// 백●
+				printf("● ");
 			}
 		}
 		printf("\n");
