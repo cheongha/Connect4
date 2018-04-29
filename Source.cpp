@@ -170,12 +170,7 @@ bool check_possible_position(int stone_location) {				// 착수 가능한 지점
 void compute_by_search_algorithm() {							// Search Algorithm 에 의해 계산된 지점에 착수
 	getchar();
 
-	int stone_location;
-	for (stone_location = 1; stone_location <= MAP_WIDTH_SIZE; stone_location++) {
-		if (check_possible_position(stone_location)) {						// 착수 가능한 지점인지 판별
-
-		}
-	}
+	
 
 
 
@@ -229,6 +224,7 @@ void print_current_map() {
 		printf("\n");
 	}
 }
+
 
 int negamax(int depth) {
 	if (depth == 7) {
