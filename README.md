@@ -3,9 +3,10 @@
 
 Team Name : 아버지날보고있다면정답을알려조
 
-Team Member : Lee Jihwan
+Team Member :
+		Lee Jihwan
 	      
-	      Kim Sunyoung
+		Kim Sunyoung
 	      
-	      Kim Younghoon
+		Kim Younghoon
 
