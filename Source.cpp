@@ -57,19 +57,13 @@ int main() {
 
 void print_intro() {																// 최초 실행 시 나타나는 안내문구
 	cout << "**************************************************************\n";
-//	printf("**************************************************************\n");
 	cout << "**************************Connect 4***************************\n";
-//	printf("**************************Connect 4***************************\n");
 	cout << "**************************************************************\n";
-//	printf("**************************************************************\n");
 	cout << "*********Copyright by 아버지날보고있다면정답을알려조**********\n";
-//	printf("*********Copyright by 아버지날보고있다면정답을알려조**********\n");
 	cout << "**************************************************************\n";
-//	printf("**************************************************************\n");
 	cout << "****************************************2018.04.29************\n";
-//	printf("****************************************2018.04.29************\n");
 	cout << "**************************************************************\n";
-//	printf("**************************************************************\n");
+
 
 
 }
@@ -96,17 +90,17 @@ void select_first_player() {
 
 void select_play_method() {															// 작수 방식 결정
 	cout << endl;
-//	printf("\n");
+
 	bool is_select_finished = false;
 	do {
 		cout << "착수 방식을 선택해주세요. (1. Search Algorithm, 2. Rule Base, 3. 직접 입력)" << endl;
-//		printf("착수 방식을 선택해주세요. (1. Search Algorithm, 2. Rule Base, 3. 직접 입력)\n");
+
 		char input_play_method;
 		cin >> input_play_method;
-//		scanf("%s", &input_play_method);
+
 		if (input_play_method == '1') {
 			cout << "Search Algorithm에 기반하여 착수합니다." << endl;
-//			printf("Search Algorithm에 기반하여 착수합니다.\n");
+
 			
 			compute_by_search_algorithm();
 
@@ -114,7 +108,7 @@ void select_play_method() {															// 작수 방식 결정
 		}
 		else if (input_play_method == '2') {
 			cout << "Rule Base로 착수합니다." << endl;
-//			printf("Rule Base로 착수합니다.\n");
+
 
 			compute_by_rule_base();
 
@@ -122,26 +116,26 @@ void select_play_method() {															// 작수 방식 결정
 		}
 		else if (input_play_method == '3') {
 			cout << "착수할 지점의 번호(1~7)를 입력해주세요." << endl;
-//			printf("착수할 지점의 번호(1~7)를 입력해주세요.\n");
+
 			getchar();
 			char input_stone_location;
 			do {
 				cout << "착수 지점 : ";
-//				printf("착수 지점 : ");
+
 				cin >> input_stone_location;
-//				scanf("%c", &input_stone_location);
+
 				if (input_stone_location >= '1' && input_stone_location <= '7') {
 					is_select_finished = true;
 				}
 				else {
 					cout << "착수 지점을 잘못 입력하였습니다. 다시 입력해주세요." << endl;
-//					printf("착수 지점을 잘못 입력하였습니다. 다시 입력해주세요.\n");
+
 				}
 			} while (!is_select_finished);
 			bool push_complete = check_possible_position(input_stone_location-'0');			// 입력 받은 열에 돌을 놓는다.
 			if (!push_complete) {											// 입력 받은 열에 돌을 놓을 수 없다.
 				cout << "해당 지점은 돌이 가득 차 있습니다.다시 입력해주세요." << endl;
-//				printf("해당 지점은 돌이 가득 차 있습니다. 다시 입력해주세요.\n");
+
 				is_select_finished = false;
 			}
 			else {
@@ -150,7 +144,6 @@ void select_play_method() {															// 작수 방식 결정
 		}
 		else {
 			cout << "잘못된 입력입니다. 다시 입력해주세요." << endl;
-//			printf("잘못된 입력입니다. 다시 입력해주세요.\n\n");
 		}
 	} while (!is_select_finished);
 	
