@@ -90,6 +90,7 @@ void play_connect4() {
 		stone = select_play_method();
 		print_current_map();
 		cout << "착수된 지점 : " << stone << endl;
+		cout << HEIGHT[stone] << endl;
 		if (is_winning(stone)) {
 			if (game_length % 2) cout << "선공의 승리" << endl;	// 먼저 둔 사람이 이긴 상황
 			else cout << "후공의 승리" << endl;					// 나중에 둔 사람이 이긴 상황
@@ -565,7 +566,7 @@ bool is_winning_temp(int column) {
 }
 
 bool is_winning(int column) {
-	int color = 1 + game_length_temp % 2;
+	int color = 1 + (game_length+1) % 2;
 	int dx, dy, cnt = 0;
 
 	if (HEIGHT[column] >= 3													// 세로로 만들어진 경우
