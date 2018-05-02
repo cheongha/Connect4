@@ -8,6 +8,7 @@ using namespace std;
 #define MAX_GAME_LENGTH 42
 
 #define max2(x,y) (x>y?x:y)
+#define min2(x,y) (x<y?x:y)
 
 int map[MAP_HEIGHT_SIZE + 1][MAP_WIDTH_SIZE + 1];					// Coonect 4 는 map은 가로 7칸 세로 6칸의 7 by 6 짜리 게임
 int HEIGHT[MAP_WIDTH_SIZE + 1];
@@ -216,16 +217,17 @@ int compute_by_search_algorithm() {							// Search Algorithm 에 의해 계산�
 			game_length_temp = game_length;
 
 			pair<int, int> t;
-			t= negamax_temp2(1, 1);
+//			t= negamax_temp2(1, 1);
+			t= negamax_alphabeta_temp(1, -100000, 100000);
 
-			if (best <= t.second) {
-				best = t.second;
+			if (best <= -t.second) {
+				best = -t.second;
 				best_move = i;
 				
 				
 				
 			}
-cout << "game_length : " << game_length + 1 << " score : " << t.second << " which? : " << i << endl;
+			cout << "game_length : " << game_length + 1 << " score : " << t.second << " which? : " << i << endl;
 			map[HEIGHT[i]][i] = 0;
 			GAME_STATE[game_length + 1] = 0;
 			HEIGHT[i]--;
@@ -235,6 +237,9 @@ cout << "game_length : " << game_length + 1 << " score : " << t.second << " whic
 	}getchar();
 	return best_move;
 
+	/*
+		개선 코드 테스트 중
+	*/
 	memcpy(map_temp,map,sizeof(map));
 	memcpy(HEIGHT_TEMP, HEIGHT, sizeof(HEIGHT));
 	memcpy(GAME_STATE_TEMP, GAME_STATE, sizeof(GAME_STATE));
@@ -328,7 +333,7 @@ int negamax(int depth) { // 하......^0^;
 
 pair<int, int> negamax_alphabeta_temp(int depth, int alpha, int beta) {
 	int color = 1 + (game_length + depth) % 2; // 1 선공(흑) 2 후공(백)
-	if (depth == 8 || MAX_GAME_LENGTH - game_length_temp <= 0) {
+	if (depth == 10 || MAX_GAME_LENGTH - game_length_temp <= 0) {
 		int i, j;
 		/*		for (i = 1; i <= game_length_temp; i++) cout << GAME_STATE_TEMP[i] << " ";
 		cout << endl;
@@ -349,7 +354,7 @@ pair<int, int> negamax_alphabeta_temp(int depth, int alpha, int beta) {
 		}
 		//		return make_pair(0,evaluate_state_temp());
 	}
-	int i, best = -100000, value;
+	int i, best = -100000, value=0;
 	int best_move = 0;
 	pair<int, int> p;
 	for (i = 1; i <= MAP_WIDTH_SIZE; i++) {
@@ -418,11 +423,11 @@ int evaluate_vertically(int column, int color) {			// 끝에서부터 연속된 
 
 int evaluate_vertically_temp(int column, int color) {		// evaluate_vertically 개선
 	int i, value = 0, cnt=0;
-	int v[4] = { 1,8,128,10000 };
+	int v[5] = { 0,1,8,128,10000 };
 	for (i = HEIGHT_TEMP[column]; i >= 1; i--) {
 		if (map_temp[i][column] == color) cnt++;
 		else break;
-		if (cnt == 4) return v[3];
+		if (cnt == 4) return v[4];
 	}
 	if (HEIGHT_TEMP[column] == MAP_HEIGHT_SIZE) return 0;	// 무의미
 	return v[cnt];
@@ -452,7 +457,7 @@ int evaluate_horizontally(int column, int row, int color) {				// 중간에 띄�
 
 int evaluate_horizontally_temp(int row, int color) {					// 가로 점수 전부 탐색 (evaluate_horizontally 에서 개선)
 	int i, j, value = 0, cnt;
-	int v[4] = { 1,8,128,10000 };
+	int v[5] = { 0,1,8,128,10000 };
 	cnt = 0;
 	int nb = 0, blank=0, st, block;
 	int column;
@@ -485,26 +490,26 @@ int evaluate_horizontally_temp(int row, int color) {					// 가로 점수 전부
 				if (block)																	// 오른쪽도 막혀있다=무의미한 돌의 연속
 					cnt = 0;
 			}
-			if (cnt == 4) return v[3];
+			if (cnt == 4) return v[4];
 			value += v[cnt];
 		}
 	}
-//	if (nb == 4) return v[3];										// four in a row!
+	return value;
 
 }
 
 int evaluate_diagonally(int column, int row, int color) {
 	int i, value = 0, cnt;
-	int v[4] = { 0,8,128,10000 };
+	int v[5] = { 0,1,8,128,10000 };
 	cnt = 0;
 	int y, x;
 	y = row;
 	x = column;
 	int nb = 0;
-	for (;y >= 1 && x>=1; y--, x--) {			// 좌하향 대각선탐색
+	for (;y >= 1 && x >= 1; y--, x--) {			// 좌하향 대각선탐색
 		if (map_temp[y][x] == color) cnt++;
-//		else if (map_temp[y][x] != color) break;
-		int nb = 0;
+		//		else if (map_temp[y][x] != color) break;
+
 	}
 	if (cnt < 4) value += v[cnt];
 	else value += v[3];
@@ -513,12 +518,65 @@ int evaluate_diagonally(int column, int row, int color) {
 	x = column;
 	for (;y <= MAP_HEIGHT_SIZE && x <= MAP_WIDTH_SIZE; y++, x++) {	// 우하향 대각선탐색
 		if (map_temp[y][x] == color) cnt++;
-//		else if (map_temp[y][x] != color) break;
+		//		else if (map_temp[y][x] != color) break;
 		nb++;
 		if (nb == 4) break;
 	}
 	if (cnt < 4) return value + v[cnt];
-	return value + v[3];
+	return value + v[4];
+}
+
+int evaluate_diagonally_temp(int column, int row, int color) {				// 대각 탐색 개선(개선은 됐는데 효과가 없네)
+	int i, value = 0, cnt;
+	int v[5] = { 0,1,8,128,10000 };
+	cnt = 0;
+	int y, x;
+	y = row;
+	x = column;
+	int nb = 0, bl=0;
+	for (;y >= 1 && x >= 1; y--, x--) {			// 좌하향 대각선탐색
+		nb++;
+		if (map_temp[y][x] == color) cnt++;
+		else if (map_temp[y][x] == 0) {
+			bl++;
+			if (bl == 2) break;
+		}
+		else break;								// 색이 다른 돌
+		if (nb == 4) break;
+	}
+	if (cnt < 4) {
+		int useless = 0;
+		if (row == MAP_HEIGHT_SIZE) useless++;
+		if (bl == 0 && nb != 4) useless++;
+		if (useless == 2) cnt = 0;
+		value += v[cnt];
+	}
+	else value += v[4];
+	cnt = 0;
+	y = row;
+	x = column;
+	nb = 0;
+	bl = 0;
+	for (;y <= MAP_HEIGHT_SIZE && x <= MAP_WIDTH_SIZE; y++, x++) {	// 우하향 대각선탐색
+		nb++;
+		if (map_temp[y][x] == color) cnt++;
+		else if (map_temp[y][x] == 0){
+			bl++;
+			if (bl == 2) break;
+		}
+		else break;
+
+		if (nb == 4) break;
+	}
+	if (cnt < 4) {
+		int useless = 0;
+		if (row == MAP_HEIGHT_SIZE) useless++;
+		if (bl == 0 && nb != 4) useless++;
+		if (useless == 2) cnt = 0;
+//		return max2(value, v[cnt]);
+		return value + v[cnt];
+	}
+	return value + v[4];
 }
 
 int evaluate_board_state() {					// color 를 받으면 + - 를 결정해서 이기고 지는걸 세분화 시킬 수 있을까? 아니면 호출한 부분에서 바로 결정해줄수 있는건가?
@@ -530,21 +588,25 @@ int evaluate_board_state() {					// color 를 받으면 + - 를 결정해서 이
 		if (map_temp[HEIGHT_TEMP[i]][i] == 1) {
 //			value_black += evaluate_vertically(i, 1);
 			value_black += evaluate_vertically_temp(i, 1);
+//			value_black = max2(value_black, evaluate_vertically_temp(i, 1));
 
 		}
 		else if (map_temp[HEIGHT_TEMP[i]][i] == 2) {
 //			value_white += evaluate_vertically(i, 2);
 			value_white += evaluate_vertically_temp(i, 2);
+//			value_white = max2(value_white, evaluate_vertically_temp(i, 2));
 		}
 	}
 	for (i = 1; i <= MAP_HEIGHT_SIZE; i++) {
 		for (j = 1; j <= MAP_WIDTH_SIZE; j++) {
 			if (map_temp[i][j] == 1) {
 				value_black += evaluate_horizontally_temp(i, 1);
+//				value_black = max2(value_black, evaluate_horizontally_temp(i, 1));
 				break;
 			}
 			else if (map_temp[i][j] == 2) {
 				value_white += evaluate_horizontally_temp(i, 2);
+//				value_white = max2(value_white, evaluate_horizontally_temp(i, 2));
 				break;
 			}
 		}
@@ -554,12 +616,14 @@ int evaluate_board_state() {					// color 를 받으면 + - 를 결정해서 이
 			if (map_temp[i][j] == 1) {			// 선공일 때 점수 계산
 //				value_black += evaluate_vertically(i, 1);
 //				value_black += evaluate_horizontally(i, j, 1);
-				value_black += evaluate_diagonally(i, j, 1);
+				value_black += evaluate_diagonally_temp(i, j, 1);
+//				value_black = max2(value_black,evaluate_diagonally(i, j, 1));
 			}
 			else if (map_temp[i][j] == 2) {
 //				value_white += evaluate_vertically(i, 2);
 //				value_white += evaluate_horizontally(i, j, 2);
-				value_white += evaluate_diagonally(i, j, 2);
+				value_white += evaluate_diagonally_temp(i, j, 2);
+//				value_white = max2(value_white,evaluate_diagonally(i, j, 2));
 			}
 		}
 	}
@@ -595,7 +659,7 @@ pair<int,int> negamax_temp2(int depth, int color) {
 			value = -p.second;
 
 			//			value = -negamax_temp(depth + 1).second;		// 다음 레벨 탐색
-			if (best < value) {						// 좋은 값을 찾는다. best
+			if (best <= value) {						// 좋은 값을 찾는다. best
 				best = value;
 				best_move = i;
 /*				for (int k = MAP_HEIGHT_SIZE; k >= 1; k--) {
