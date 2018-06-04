@@ -1,197 +1,506 @@
-ï»¿#include <iostream>
-#include <memory>
+#define _CRT_SECURE_NO_DEPRECATE
 
-using namespace std;
+#include <stdio.h>
+#include <stdlib.h>
+#include <memory.h>
+#include <time.h>
 
-#define MAP_WIDTH_SIZE 7
-#define MAP_HEIGHT_SIZE 6
-#define MAX_GAME_LENGTH 42
+#define MAP_WIDTH_SIZE 7											// Connect 4 °ÔÀÓÀÇ °¡·Î ±æÀÌ´Â 7Ä­
+#define MAP_HEIGHT_SIZE 6											// Connect 4 °ÔÀÓÀÇ ¼¼·Î ±æÀÌ´Â 6Ä­
+#define MAX_GAME_LENGTH 42											// Connect 4 ¿¡¼­ ÃÖ´ë °ÔÀÓÀÇ ±æÀÌ´Â 42È¸(6*7)
 
-#define max2(x,y) (x>y?x:y)
-#define min2(x,y) (x<y?x:y)
-
-int map[MAP_HEIGHT_SIZE + 1][MAP_WIDTH_SIZE + 1];					// Coonect 4 ëŠ” mapì€ ê°€ë¡œ 7ì¹¸ ì„¸ë¡œ 6ì¹¸ì˜ 7 by 6 ì§œë¦¬ ê²Œì„
-int HEIGHT[MAP_WIDTH_SIZE + 1];
-
-int map_temp[MAP_HEIGHT_SIZE + 1][MAP_WIDTH_SIZE + 1];				// map_temp
-int HEIGHT_TEMP[MAP_WIDTH_SIZE + 1];
+int map[MAP_HEIGHT_SIZE + 1][MAP_WIDTH_SIZE + 1];					// Coonect 4 ´Â mapÀº °¡·Î 7Ä­ ¼¼·Î 6Ä­ÀÇ 7 by 6 Â¥¸® °ÔÀÓ, ÇöÀç ÅÏ¿¡¼­ °ÔÀÓÀÇ ÁøÇà »óÅÂ¸¦ ³ªÅ¸³»´Â ¹è¿­
+int HEIGHT[MAP_WIDTH_SIZE + 1];										// °¢ ¿­¸¶´Ù ¸î°³ÀÇ µ¹ÀÌ ³õ¿©Á® ÀÖ´ÂÁö ÀúÀåÇØ ³õÀº ¹è¿­
+int GAME_STATE[MAX_GAME_LENGTH + 1];								// °¢ ÅÏ¸¶´Ù ¾î¶² À§Ä¡¿¡ µ¹À» µÎ¾ú´ÂÁö ÀúÀåÇØ ³õÀº ¹è¿­
 
 
-int STONE_COLOR = 1;												// í˜„ì¬ ì–´ë–¤ ìƒ‰ì´ ì°©ìˆ˜í•  ì°¨ë¡€ì¸ì§€ (1==â—‹ 2==â—)
-																	// !**ì„ /í›„ê³µ ë‚˜ëˆ„ëŠ” êµ¬í˜„ í•„ìš”**!
+int map_temp[MAP_HEIGHT_SIZE + 1][MAP_WIDTH_SIZE + 1];				// ÀÓ½Ã·Î »ç¿ëÇÒ map
+int HEIGHT_TEMP[MAP_WIDTH_SIZE + 1];								// ÀÓ½Ã·Î »ç¿ëÇÒ HEIGHT
 
-int game_length;													// ëª‡ê°œì˜ ì°©ìˆ˜ê°€ ì´ë¤„ì¡ŒëŠ”ì§€
-int game_length_temp;
-int GAME_STATE[MAX_GAME_LENGTH];									// í˜„ì¬ê¹Œì§€ ê²Œì„ì´ ì–´ë–»ê²Œ ì§„í–‰ë˜ì—ˆëŠ”ì§€ ì €ì¥í•˜ëŠ” ë°°ì—´
-int GAME_STATE_TEMP[MAX_GAME_LENGTH];
-
-int heuristic_table[MAP_HEIGHT_SIZE + 1][MAP_WIDTH_SIZE + 1] = {{ 3, 4, 5, 7, 5, 4, 3 },				// heuristic table
-																{ 4, 6, 8, 10, 8, 6, 4 },				// ê° ì ìˆ˜ëŠ” í•´ë‹¹ ìœ„ì¹˜ì— ëŒì´ ì¡´ì¬í•  ë•Œ ìŠ¹ë¦¬í•˜ê²Œ ë  ê°€ì¤‘ì¹˜
-																{ 5, 8, 11, 13, 11, 8, 5 },				
-																{ 5, 8, 11, 13, 11, 8, 5 },				
-																{ 4, 6, 8, 10, 8, 6, 4 },
-																{ 3, 4, 5, 7, 5, 4, 3 } };
+int a, b, c, d;														// Rule base ¿¡¼­ »ç¿ëÇÒ check ÀÎÀÚ
 
 
-void print_intro();													// ìµœì´ˆ ì‹¤í–‰ ì‹œ ë‚˜íƒ€ë‚˜ëŠ”
-void select_first_player();											// ì„ ê³µ ê²°ì •
-int select_play_method();											// 1.search algorithm	2.rule base		3.ì§ì ‘ ì…ë ¥
+int STONE_COLOR = 1;												// ÇöÀç ¾î¶² »öÀÌ Âø¼öÇÒ Â÷·ÊÀÎÁö (1==¡Û 2==¡Ü)
+																	// !**¼±/ÈÄ°ø ³ª´©´Â ±¸Çö ÇÊ¿ä**!
 
-int compute_by_search_algorithm();									// search algorithm ì„ í†µí•œ ì°©ìˆ˜ì  ê³„ì‚°
-int negamax(int depth);												// search algorithm ì— ì‚¬ìš©ë  negamax í•¨ìˆ˜
-pair<int,int> negamax_temp(int depth);								// í‰ê°€í•¨ìˆ˜
-pair<int, int> negamax_temp2(int depth, int color);					// í‰ê°€í•¨ìˆ˜ ê°œì„ ? ê°œì„  ì‹¤íŒ¨
+int game_length;													// ¸î°³ÀÇ Âø¼ö°¡ ÀÌ·ïÁ³´ÂÁö
+int game_length_temp;												// ÀÓ½Ã·Î »ç¿ëÇÒ game_length_temp
 
-pair<int, int> negamax_alphabeta_temp(int depth, int alpha, int beta); // negamax with alphabeta prunning
-pair<int, int> negamax_alphabeta_temp2(int depth, int alpha, int beta); // 2
 
-int evaluate_state_temp();
+void print_intro();													// ÃÖÃÊ ½ÇÇà ½Ã ³ªÅ¸³ª´Â È­¸é
+void select_first_player();											// ¼±°ø °áÁ¤
+int select_play_method();											// 1.search algorithm	2.rule base		3.Á÷Á¢ ÀÔ·Â
+
+int compute_by_search_algorithm();									// search algorithm À» ÅëÇÑ Âø¼öÁ¡ °è»ê
+int compute_by_rule_base();											// rule base ·Î Âø¼öÁ¡ °è»ê
+
+void push_stone(char input_stone_location);							// Âø¼öÁ¡¿¡ Âø¼ö
+
+void print_current_map();											// ÇöÀç±îÁö ÁøÇàµÈ °ÔÀÓÀÇ state
+
+void play_connect4();												// °ÔÀÓ ÇÃ·¹ÀÌ
+
 int evaluate_board_state();
 
-void compute_by_rule_base();										// rule base ë¡œ ì°©ìˆ˜ì  ê³„ì‚°
+bool check_possible_position(int stone_location);					// ÇØ´ç ÁöÁ¡¿¡ µ¹À» ³õÀ» ¼ö ÀÖ´ÂÁö?
+bool is_winning(int column);										// Áö±İ »óÅÂ¿¡¼­ column¿¡ µ×À» ¶§ ÀÌ±â´Â°¡?
+bool is_winning_temp(int column);									// Áö±İ »óÅÂ¿¡¼­ column¿¡ µ×À» ¶§ ÀÌ±â´Â°¡? ÀÓ½Ã ÄÚµå
 
-bool check_possible_position(int stone_location);					// í•´ë‹¹ ì§€ì ì— ëŒì„ ë†“ì„ ìˆ˜ ìˆëŠ”ì§€?
-void push_stone(char input_stone_location);							// ì°©ìˆ˜ì ì— ì°©ìˆ˜
 
-void print_current_map();											// í˜„ì¬ê¹Œì§€ ì§„í–‰ëœ ê²Œì„ì˜ state
 
-void play_connect4();												// ê²Œì„ í”Œë ˆì´
+int heuristic_value[3][3][3][3][3][3][3];
 
-bool is_winning(int column);
-bool is_winning_temp(int column);									// ì§€ê¸ˆ ìƒíƒœì—ì„œ columnì— ë’€ì„ ë•Œ ì´ê¸°ëŠ”ê°€?
+int minmax(int depth);
+int minmax_alphabeta_pruning(int depth, int alpha, int beta);
+
+int check_connect3(int count, int color);
+int check_nconnect3(int count, int color);
+
+int find_another_column(int count);
 
 int main() {
 
 	print_intro();
-	// ì„ /í›„ê³µ ê²°ì • êµ¬í˜„ í•„ìš” ?
-	// í˜„ì¬ ë¬´ì¡°ê±´ í‘ì´ ì„ ê³µ
-//	select_first_player();
+	// ¼±/ÈÄ°ø °áÁ¤ ±¸Çö ÇÊ¿ä ?
+	// ÇöÀç ¹«Á¶°Ç ÈæÀÌ ¼±°ø
+	//	select_first_player();
 	play_connect4();
 
 	return 0;
 }
-
-
-
-void print_intro() {																// ìµœì´ˆ ì‹¤í–‰ ì‹œ ë‚˜íƒ€ë‚˜ëŠ” ì•ˆë‚´ë¬¸êµ¬
-	cout << "******************************************************************\n";
-	cout << "****************************Connect 4*****************************\n";
-	cout << "******************************************************************\n";
-	cout << "***********Copyright by ì•„ë²„ì§€ë‚ ë³´ê³ ìˆë‹¤ë©´ì •ë‹µì„ì•Œë ¤ì¡°************\n";
-	cout << "******************************************************************\n";
-	cout << "********************************************2018.04.29************\n";
-	cout << "******************************************************************\n";
-
-
+void print_intro() {																// ÃÖÃÊ ½ÇÇà ½Ã ³ªÅ¸³ª´Â ¾È³»¹®±¸
+	printf("**************************************************************************\n");
+	printf("********************************Connect 4*********************************\n");
+	printf("**************************************************************************\n");
+	printf("***************Copyright by ¾Æ¹öÁö³¯º¸°íÀÖ´Ù¸éÁ¤´äÀ»¾Ë·ÁÁ¶****************\n");
+	printf("**************************************************************************\n");
+	printf("****************************************************2018.05.03************\n");
+	printf("**************************************************************************\n");
 
 }
 
-void play_connect4() {
+void play_connect4() {											// °ÔÀÓÀ» ½ÇÇàÇÑ´Ù
 	int stone;
 	do {
-		stone = select_play_method();
-		print_current_map();
-		cout << "ì°©ìˆ˜ëœ ì§€ì  : " << stone << endl;
-		cout << HEIGHT[stone] << endl;
-		if (is_winning(stone)) {
-			if (game_length % 2) cout << "ì„ ê³µì˜ ìŠ¹ë¦¬" << endl;	// ë¨¼ì € ë‘” ì‚¬ëŒì´ ì´ê¸´ ìƒí™©
-			else cout << "í›„ê³µì˜ ìŠ¹ë¦¬" << endl;					// ë‚˜ì¤‘ì— ë‘” ì‚¬ëŒì´ ì´ê¸´ ìƒí™©
+		stone = select_play_method();							// ¾îµğ¿¡ µ¹À» µÎ¾ú´ÂÁö ¹Ş¾Æ¿Â´Ù. play_method´Â 1. Search, 2.Rule, 3.Á÷Á¢ÀÔ·Â ÀÌ ÀÖ´Ù.
+		print_current_map();									// ¼±ÅÃÇÑ ¹æ¹ıÀ¸·Î µ¹À» µÎ¾úÀ» ¶§ ÇöÀçÀÇ °ÔÀÓ ÁøÇà ¸Ê
+		printf("Âø¼öµÈ ÁöÁ¡ : %d\n", stone);						// ¾îµğ¿¡ µ×´ÂÁö È®ÀÎ
+													
+		if (is_winning(stone)) {								// Áö±İ µ· µÑÀÌ ½ÂÆĞ¸¦ °áÁ¤Çß´Â°¡?
+			if (game_length % 2) printf("¼±°øÀÇ ½Â¸®\n");		// ¸ÕÀú µĞ »ç¶÷ÀÌ ÀÌ±ä »óÈ²
+			else printf("ÈÄ°øÀÇ ½Â¸®\n");						// ³ªÁß¿¡ µĞ »ç¶÷ÀÌ ÀÌ±ä »óÈ²
 			break;
 		}
-		if (game_length == MAX_GAME_LENGTH) {					// game ì˜ ìŠ¹íŒ¨ê°€ ë‚˜ì§€ ì•Šì•˜ë‹¤.
-			cout << "ë¬´ìŠ¹ë¶€" << endl;
+		if (game_length == MAX_GAME_LENGTH) {					// game ÀÇ ½ÂÆĞ°¡ ³ªÁö ¾Ê¾Ò´Ù.
+			printf("¹«½ÂºÎ\n");
 			break;
 		}
 	} while (true);
-	cout << "ê²Œì„ ì¢…ë£Œ";
+	printf("°ÔÀÓ Á¾·á\n");
+	getchar();
+	printf("Á¾·áÇÏ·Á¸é ¾Æ¹«Å°³ª ´©¸£¼¼¿ä.\n");
 	getchar();
 }
 
-void select_first_player() {									// ì„  í›„ê³µ ê²°ì •
-	bool is_input_correct = false;
-	char input_first_player;
-	do {
-		cout << "ì„ ê³µì„ ê²°ì •í•´ì£¼ì„¸ìš”. (1. Computer 2. ì‚¬ëŒ) : ";
-		cin >> input_first_player;
-		if (input_first_player == '1') {
-			cout << "ì»´í“¨í„°(â—‹)ì˜ ì„ ê³µì…ë‹ˆë‹¤." << endl;
-			is_input_correct = true;
-		}
-		else if (input_first_player == '2') {
-			cout << "ì‚¬ëŒ(â—‹)ì˜ ì„ ê³µì…ë‹ˆë‹¤." << endl;
-			is_input_correct = true;
-		}
-		else {
-			cout << "ì˜ëª»ëœ ì…ë ¥ì…ë‹ˆë‹¤. ë‹¤ì‹œ ì…ë ¥í•´ì£¼ì„¸ìš”." << endl;
-		}
-	} while (!is_input_correct);
-}
 
-int select_play_method() {															// ì‘ìˆ˜ ë°©ì‹ ê²°ì •
-	cout << endl;
+int select_play_method() {															// ÀÛ¼ö ¹æ½Ä °áÁ¤
+	printf("\n");
 
-	bool is_select_finished = false;
+	bool is_select_finished = false;												// µ¹À» ¼º°øÀûÀ¸·Î ³õÀ» ¶§±îÁö while ¹®Àº °è¼Ó µ¹¾Æ¾ß ÇÏ¹Ç·Î ÀÌ¸¦ ÆÇ´ÜÇØÁÖ´Â boolean º¯¼ö
 	int stone;
+
+	clock_t begin, end;
+
 	do {
-		cout << "ì°©ìˆ˜ ë°©ì‹ì„ ì„ íƒí•´ì£¼ì„¸ìš”. (1. Search Algorithm, 2. Rule Base, 3. ì§ì ‘ ì…ë ¥)" << endl;
+		printf("Âø¼ö ¹æ½ÄÀ» ¼±ÅÃÇØÁÖ¼¼¿ä. (1. Search Algorithm, 2. Rule Base, 3. Á÷Á¢ ÀÔ·Â) : ");
 
 		char input_play_method;
-		cin >> input_play_method;
+		scanf("%c",&input_play_method);												// Âø¼ö ¹æ½Ä ÀÔ·Â¹ŞÀ½
+//		getchar(); // ?
+		begin = clock();															// µ¹ ³õ±â±îÁö °áÁ¤ÇÏ´Âµ¥ °É¸®´Â ½Ã°£ ÃøÁ¤ ½ÃÀÛ
 
-		if (input_play_method == '1') {
-			cout << "Search Algorithmì— ê¸°ë°˜í•˜ì—¬ ì°©ìˆ˜í•©ë‹ˆë‹¤." << endl;
+		if (input_play_method == '1') {												// 1. Search ·Î µ¹À» µÑ ¶§
+			printf("Search Algorithm¿¡ ±â¹İÇÏ¿© Âø¼öÇÕ´Ï´Ù.\n");
 
-			stone = compute_by_search_algorithm();
-			cout << "ê³„ì‚°ëœ ì°©ìˆ˜ì  : " << stone << endl;
-			push_stone(stone+'0');
+			stone = compute_by_search_algorithm();									// compute_by_search_algorithm ÇÔ¼ö¸¦ ÀÌ¿ëÇØ¼­ ¾îµğ À§Ä¡¿¡ µ¹À» µÑ °ÍÀÎÁö ¾Ë¾Æ¿Â´Ù.
+			//cout << "°è»êµÈ Âø¼öÁ¡ : " << stone << endl;
+			push_stone(stone + '0');												// ¾Ë¾Æ¿Â °÷ÀÇ À§Ä¡¿¡ µ¹À» µĞ´Ù
 
-			is_select_finished = true;
+			is_select_finished = true;												// µ¹À» µÎ¾úÀ¸´Ï while¹®À» ºüÁ®³ª¿À±â À§ÇØ true·Î ¹Ù²ãÁØ´Ù.
 		}
-		else if (input_play_method == '2') {
-			cout << "Rule Baseë¡œ ì°©ìˆ˜í•©ë‹ˆë‹¤." << endl;
+		else if (input_play_method == '2') {										// 2. Rule ·Î µ¹À» µÑ ¶§
+			printf("Rule Base·Î Âø¼öÇÕ´Ï´Ù.\n");
 
-
-			compute_by_rule_base();
-
-			is_select_finished = true;
+			stone = compute_by_rule_base();													// compute_by_rule_base ÇÔ¼ö¸¦ ÀÌ¿ëÇØ¼­ ¾îµğ À§Ä¡¿¡ µ¹À» µÑ °ÍÀÎÁö ¾Ë¾Æ¿Â´Ù.
+			push_stone(stone + '0');
+			is_select_finished = true;												// ¾ÆÁ÷ rule base ·Î µÎ´Â ÇÔ¼ö °³¹ß ¾ÈµÊ
 		}
 		else if (input_play_method == '3') {
-			cout << "ì°©ìˆ˜í•  ì§€ì ì˜ ë²ˆí˜¸(1~7)ë¥¼ ì…ë ¥í•´ì£¼ì„¸ìš”." << endl;
-
+			printf("Âø¼öÇÒ ÁöÁ¡ÀÇ ¹øÈ£(1~7)¸¦ ÀÔ·ÂÇØÁÖ¼¼¿ä.\n");
 			getchar();
 			char input_stone_location;
 			do {
-				cout << "ì°©ìˆ˜ ì§€ì  : ";
-
-				cin >> input_stone_location;
-
-				if (input_stone_location >= '1' && input_stone_location <= '7') {
+				printf("Âø¼ö ÁöÁ¡ : ");
+				scanf("%c",&input_stone_location);										// »ç¿ëÀÚ°¡ µ¹À» µÎ±â·Î Á÷Á¢ ÀÔ·ÂÇÑ À§Ä¡
+				getchar();
+				if (input_stone_location >= '1' && input_stone_location <= '7') {	// 1~7 ¹üÀ§·Î Á¤È®ÇÏ°Ô ÀÔ·ÂÇßÀ» ¶§
 					stone = input_stone_location - '0';
 					is_select_finished = true;
 				}
-				else {
-					cout << "ì°©ìˆ˜ ì§€ì ì„ ì˜ëª» ì…ë ¥í•˜ì˜€ìŠµë‹ˆë‹¤. ë‹¤ì‹œ ì…ë ¥í•´ì£¼ì„¸ìš”." << endl;
+				else {																// 1~7 ÀÌ¿ÜÀÇ ÀÔ·ÂÀ» ¹Ş¾ÒÀ¸¸é ÀÌ´Â Àß¸øµÈ ÀÔ·Â
+					printf("Âø¼ö ÁöÁ¡À» Àß¸ø ÀÔ·ÂÇÏ¿´½À´Ï´Ù. ´Ù½Ã ÀÔ·ÂÇØÁÖ¼¼¿ä.\n");
 
 				}
 			} while (!is_select_finished);
-			bool push_complete = check_possible_position(input_stone_location-'0');			// ì…ë ¥ ë°›ì€ ì—´ì— ëŒì„ ë†“ëŠ”ë‹¤.
-			if (!push_complete) {											// ì…ë ¥ ë°›ì€ ì—´ì— ëŒì„ ë†“ì„ ìˆ˜ ì—†ë‹¤.
-				cout << "í•´ë‹¹ ì§€ì ì€ ëŒì´ ê°€ë“ ì°¨ ìˆìŠµë‹ˆë‹¤.ë‹¤ì‹œ ì…ë ¥í•´ì£¼ì„¸ìš”." << endl;
-
+			bool push_complete = check_possible_position(input_stone_location - '0');			// ÀÔ·Â ¹ŞÀº ¿­¿¡ µ¹À» ³õÀ» ¼ö ÀÖ´ÂÁö È®ÀÎÇØÁØ´Ù.
+			if (!push_complete) {																// ÀÔ·Â ¹ŞÀº ¿­¿¡ µ¹À» ³õÀ» ¼ö ¾ø´Ù.
+				printf("ÇØ´ç ÁöÁ¡Àº µ¹ÀÌ °¡µæ Â÷ ÀÖ½À´Ï´Ù.´Ù½Ã ÀÔ·ÂÇØÁÖ¼¼¿ä.\n");
 				is_select_finished = false;
 			}
-			else {
+			else {																				// ÀÔ·Â ¹ŞÀº ¿­¿¡ µ¹À» µÑ ¼ö ÀÖ´Ù.
 				push_stone(input_stone_location);
 			}
 		}
-		else {
-			cout << "ì˜ëª»ëœ ì…ë ¥ì…ë‹ˆë‹¤. ë‹¤ì‹œ ì…ë ¥í•´ì£¼ì„¸ìš”." << endl;
+		else {																		// 1.Search, 2.Rule, 3.Á÷Á¢ÀÔ·Â ¿ÜÀÇ ´Ù¸¥ ÀÔ·ÂÀ¸·Î ÀÎÇÑ Àß¸øµÈ ÀÔ·Â.
+			printf("Àß¸øµÈ ÀÔ·ÂÀÔ´Ï´Ù. ´Ù½Ã ÀÔ·ÂÇØÁÖ¼¼¿ä.\n");
 		}
+
+		end = clock();																// µ¹À» ³õ´Âµ¥ °É¸° ½Ã°£ ÃøÁ¤ Á¾·á
+
+		printf("¼öÇà½Ã°£ : %dÃÊ\n",((end - begin) / CLOCKS_PER_SEC));			// µ¹À» ÇÏ³ª ³õ´Âµ¥ °É¸° ½Ã°£À» ÃÊ´ÜÀ§·Î Ãâ·Â
 	} while (!is_select_finished);
 	return stone;
 }
 
-bool check_possible_position(int stone_location) {				// ì°©ìˆ˜ ê°€ëŠ¥í•œ ì§€ì ì¸ì§€ íŒë³„(=í•´ë‹¹ ì—´ì— ì´ë¯¸ ëŒì´ 6ê°œê°€ ë“¤ì–´ê°€ ìˆëŠ”ì§€ ì•„ë‹Œì§€ íŒë³„)
+int compute_by_search_algorithm() {							// Search Algorithm ¿¡ ÀÇÇØ °è»êµÈ ÁöÁ¡¿¡ Âø¼ö
+	getchar();
+	int best = -1000000, best_move = 0, value;
+	if (game_length == 0) return 3;							// Ã³À½¿¡ 4¹ø ¿­¿¡ µÑ ¼ö ¾ø¾î¼­ ±× ´ÙÀ½À¸·Î ÁÁÀº °ªÀÎ 3¹ø ¿­¿¡ µĞ´Ù.
+	if (game_length % 2 == 1) best = 1000000;
+	for (int i = 1; i <= MAP_WIDTH_SIZE; i++) {				// ÇØ´ç ÅÏ¿¡¼­ µÑ ¼ö ÀÖ´Â À§Ä¡ Å½»ö
+		if (HEIGHT[i] < MAP_HEIGHT_SIZE) {					// ÇØ´ç Ä­ÀÇ ³ôÀÌ°¡ ÃæºĞÇÏ¿© ÇÑ ¼ö µÑ ¼ö ÀÖÀ» ¶§
+			HEIGHT[i]++;									// µ×´Ù°í °¡Á¤, ¹Ø¿¡¼­ -- ÇØÁÙ °ÍÀÓ.
+			map[HEIGHT[i]][i] = 1 + game_length % 2;		// µ×´Ù°í °¡Á¤, 1Àº ¼±°ø 2´Â ÈÄ°ø/ game_length´Â 0ºÎÅÍ ½ÃÀÛÇÔ
+			game_length++;									// µ×´Ù°í °¡Á¤
+			if (is_winning(i)) {							// ¾Ë°íº¸´Ï ÀÌ±â´Â ¼ö¿´´Ù?
+				game_length--;								// ½ÇÁ¦·Î µ¹À» ³Ö´Â ÇÔ¼ö´Â push_stoneÀÌ¹Ç·Î Àá½Ã ³Ö¾ú´ø »óÅÂ¸¦ ÇØÁ¦
+				map[HEIGHT[i]][i] = 0;
+				HEIGHT[i]--;
+				return i;									// ÀÌ±â´Â ¼ö¿¡ Âø¼öÇÏµµ·Ï °ª ¹İÈ¯
+			}
+			game_length--;
+
+			memcpy(map_temp, map, sizeof(map));				// ÀÓ½Ã¹è¿­À» ÀÌ¿ëÇÑ depth Å½»ö
+			memcpy(HEIGHT_TEMP, HEIGHT, sizeof(HEIGHT));
+
+			game_length_temp = game_length + 1;				// ÇÑ ¼ö µ×À¸´Ï±î +1
+															//			value = minmax(1);									// ÇÑ ¼ö ¾ÕÀ» º¸·¯ °£´Ù. minmax ÀÌ¿ë
+			value = minmax_alphabeta_pruning(1, -1000000, 1000000); // ÇÑ ¼ö ¾ÕÀ» º¸·¯ °£´Ù. minmax with alphabeta pruning
+
+			if (game_length % 2 == 0) {							// ¼±°øÀÇ Á¡¼ö °è»êÀº max
+				if (best <= value) {
+					if (best == value) {						// °°Àº °ªÀÌ best·Î ÃøÁ¤µÈ´Ù¸é
+						if (abs(4 - i) < abs(4 - best_move)) best_move = i;	// °¡¿îµ¥¿¡ °¡±î¿î ¾Ö¸¦ ¼±ÅÃÇÒ ¼ö ÀÖµµ·Ï
+					}
+					else {
+						best = value;
+						best_move = i;
+					}
+				}
+//				cout << "game_length : " << game_length + 1 << " score : " << value << " which? : " << i << endl;	// µğ¹ö±ë¿ë
+				printf("game_length : %d score : %d which? : %d\n",game_length+1,value,i);
+			}
+			else {												// ÈÄ°øÀÇ Á¡¼ö °è»êÀº min
+				if (best >= value) {
+					if (best == value) {						// °°Àº °ªÀÌ best·Î ÃøÁ¤µÈ´Ù¸é
+						if (abs(4 - i) < abs(4 - best_move)) best_move = i;	// °¡¿îµ¥¿¡ °¡±î¿î ¾Ö¸¦ ¼±ÅÃÇÒ ¼ö ÀÖµµ·Ï
+					}
+					else {
+						best = value;
+						best_move = i;
+					}
+				}
+//				cout << "game_length : " << game_length + 1 << " score : " << value << " which? : " << i << endl;	// µğ¹ö±ë¿ë
+				printf("game_length : %d score : %d which? : %d\n",game_length+1,value,i);
+			}
+			map[HEIGHT[i]][i] = 0;							// ´ÙÀ½ ¼ö¸¦ Å½»öÇÏ´Âµ¥ ¿µÇâÀ» ¹ÌÄ¡Áö ¾Ê±â À§ÇØ µÎ±â ÀÌÀü »óÅÂ·Î µ¹·Á³õÀ½
+			HEIGHT[i]--;
+		}
+	}
+	return best_move;										// °¡Àå ÁÁÀº ¼ö·Î °è»êµÈ À§Ä¡¸¦ ¹İÈ¯
+}
+
+
+int check_connect3(int count, int color) {// 1-> color 2->opponent_color
+	for (int i = 1; i < 7; i++) {
+		for (int j = 1; j < 8; j++) {
+			//°¡·Î·Î 3°³ ¿¬¼ÓÇØ¼­ ÀÖÀ» ¶§
+			//µ¹ 3°³°¡ ¸Ç ¾Æ·§ÁÙ¿¡ °¡·Î·Î ¿¬¼ÓÀ¸·Î ÀÖÀ»¶§
+			if (i == 1 && j < 5) {
+				if (map[i][j] == color && map[i][j + 1] == color && map[i][j + 2] == color && map[i][j + 3] == 0) {
+					return j + 3;
+				}
+			}
+			if (j > 1 && j < 6 && i == 1) {
+				if (map[i][j] == color && map[i][j + 1] == color && map[i][j + 2] == color && map[i][j - 1] == 0) {
+					return j - 1;
+				}
+			}
+			//¸Ç ¾Æ·§ÁÙÀ» Á¦¿ÜÇÑ ÁÙ¿¡ 3°³°¡ °¡·Î·Î ¿¬¼ÓÀ¸·Î ÀÖÀ»¶§
+			if (i>1 && j < 5) {				// ÁÂÃø¿¡ µĞ´Ù
+				if (map[i][j] == color && map[i][j + 1] == color && map[i][j + 2] == color && map[i][j + 3] == 0 &&
+					(map[i - 1][j + 3] == 1 || map[i - 1][j + 3] == 2)) {
+					return j + 3;
+				}
+			}
+			if (i > 1 && j > 1 && j < 6) {	// ¿ìÃø¿¡ µĞ´Ù
+				if (map[i][j] == color && map[i][j + 1] == color && map[i][j + 2] == color && map[i][j - 1] == 0 &&
+					(map[i - 1][j - 1] == 1 || map[i - 1][j - 1] == 2)) {
+					return j - 1;
+				}
+			}
+			// OOO Ã³¸® ³¡
+
+			//¼¼·Î·Î 3°³°¡ ¿¬¼ÓÀ¸·Î ÀÖÀ» ¶§
+			if (i < 4) {
+				if (map[i][j] == color && map[i + 1][j] == color && map[i + 2][j] == color && map[i + 3][j] == 0 && i < 4 && i>0) {
+					return j;
+				}
+			}
+			// ¼¼·Î·Î 3°³ ¿¬¼Ó Ã³¸® ³¡
+
+			//´ë°¢¼±À¸·Î 3°³ ÀÖÀ»¶§ case 1(¿ì ÇÏÇâ)
+			if (i > 2 && i < 6 && j>1 && j < 6) {		// ÁÂÃø À§ÂÊ¿¡ µÖ¼­ ´ë°¢¼±4°³¸¦ ¸¸µç´Ù
+				if (map[i][j] == color && map[i - 1][j + 1] == color && map[i - 2][j + 2] == color) {
+					if (map[i + 1][j - 1] == 0 && (map[i][j - 1] == 1 || map[i][j - 1] == 2)) {
+						return j - 1;
+					}
+				}
+			}
+			if (i > 3 && j < 5) {						// ¿ìÃø ¾Æ·¡ÂÊ¿¡ µÖ¼­ ´ë°¢¼±4°³¸¦ ¸¸µç´Ù.
+				if (map[i][j] == color && map[i - 1][j + 1] == color && map[i - 2][j + 2] == color) {
+					if (map[i - 3][j + 3] == 0 && (map[i - 4][j + 3] == 1 || map[i - 4][j + 3] == 2 || i == 4)) {
+						return j + 3;
+					}
+				}
+			}
+			//´ë°¢¼±À¸·Î 3°³ ¿¬¼Ó case 1 Ã³¸® 
+
+
+			//´ë°¢¼±À¸·Î 3°³ ÀÖÀ»¶§ case 2 (ÁÂ ÇÏÇâ)		// ÁÂÃø ¾Æ·¡ÂÊ¿¡ µÖ¼­ ´ë°¢¼± 4°³¸¦ ¸¸µç´Ù
+			if (i > 3 && j > 3) {
+				if (map[i][j] == color && map[i - 1][j - 1] == color && map[i - 2][j - 2] == color) {
+					if (map[i - 3][j - 3] == 0 && (map[i - 4][j - 3] == 1 || map[i - 4][j - 3] == 2 || i == 4)) {
+						return j - 3;
+					}
+				}
+			}
+			if (i > 2 && i < 6 && j>2 && j < 7) {		// ¿ìÃø À§ÂÊ¿¡ µÖ¼­ ´ë°¢¼± 4°³¸¦ ¸¸µç´Ù
+				if (map[i][j] == color && map[i - 1][j - 1] == color && map[i - 2][j - 2] == color) {
+					if (map[i + 1][j + 1] == 0 && (map[i][j + 1] == 1 || map[i][j + 1] == 2)) {
+						return j + 1;
+					}
+				}
+			}//´ë°¢¼±À¸·Î 3°³ ¿¬¼Ó case 2 Ã³¸® ³¡ 
+		}
+	}//for¹® ³¡
+	return check_nconnect3(count, color);
+}
+
+//¿¬°áµÇÁö ¾ÊÁö¸¸ ÇÑ¼ö¸¸ ´õ µÎ¸é ³¡³ª´Â ¼ö°¡ Á¸ÀçÇÒ ¶§
+int check_nconnect3(int count, int color) {
+	for (int i = 1; i < 7; i++) {
+		for (int j = 1; j < 8; j++) {
+
+			// oo o ÀÏ¶§, ¸Ç ¾Æ·§ÁÙÀÌ ¾Æ´Ò ¶§
+			if (i > 1 && j<5) {
+				if (map[i][j] == color && map[i][j + 1] == color && map[i][j + 3] == color && map[i][j + 2] == 0 &&
+					(map[i - 1][j + 2] == 1 || map[i - 1][j + 2] == 2)) {
+					return j + 2;
+				}
+			}
+			//¸Ç ¾Æ·§ÁÙÀÏ¶§
+			if (i == 1 && j<5) {
+				if (map[i][j] == color && map[i][j + 1] == color && map[i][j + 3] == color && map[i][j + 2] == 0) {
+					return j + 2;
+				}
+			}
+
+			//o oo ÀÏ¶§, ¸Ç ¾Æ·§ÁÙÀÌ ¾Æ´Ò ¶§
+			if (i > 1 && j < 5) {
+				if (map[i][j] == color && map[i][j + 2] == color && map[i][j + 3] == color && map[i][j + 1] == 0 &&
+					(map[i - 1][j + 1] == 1 || map[i - 1][j + 1] == 2)) {
+					return j + 1;
+				}
+			}
+			//¸Ç ¾Æ·§ÁÙÀÏ¶§
+			if (i == 1 && j < 5) {
+				if (map[i][j] == color && map[i][j + 2] == color && map[i][j + 3] == color && map[i][j + 1] == 0) {
+					return j + 1;
+				}
+			}
+			//   o
+			//  
+			// o
+			//o
+			if (i < 4 && j < 5) {
+				if (map[i][j] == color && map[i + 1][j + 1] == color && map[i + 3][j + 3] == color && map[i + 2][j + 2] == 0 &&
+					(map[i + 1][j + 2] == 1 || map[i + 1][j + 2] == 2)) {
+					return j + 2;
+				}
+			}
+			//   o
+			//  o
+			// 
+			//o
+			if (i < 4 && j < 5) {
+				if (map[i][j] == color && map[i + 2][j + 2] == color && map[i + 3][j + 3] == color && map[i + 1][j + 1] == 0 &&
+					(map[i][j + 1] == 1 || map[i][j + 1] == 2)) {
+					return j + 1;
+				}
+			}
+			//o
+			// o 
+			//  
+			//   o
+			if (i > 3 && j < 5) {
+				if (map[i][j] == color && map[i - 1][j + 1] == color && map[i - 3][j + 3] == color && map[i - 2][j + 2] == 0 &&
+					(map[i - 3][j + 2] == 1 || map[i - 3][j + 2] == 2)) {
+					return j + 2;
+				}
+			}
+			//o
+			//  
+			//  o
+			//   o
+			if (i > 3 && j < 5) {
+				if (map[i][j] == color && map[i - 2][j + 2] == color && map[i - 3][j + 3] == color && map[i - 1][j + 1] == 0 &&
+					(map[i - 2][j + 1] == 1 || map[i - 2][j + 1] == 2)) {
+					return j + 1;
+				}
+			}
+
+		}
+	}//for¹® ³¡
+	return 0;
+	//Check_connect3(count);
+}
+
+int find_another_column(int count) {
+	for (int i = 1; i <= MAP_HEIGHT_SIZE; i++) {
+		if (map[i][4] == 0 && (map[i - 1][4] == 1 || map[i - 1][4] == 2 || i == 1))
+		{
+			return 4;
+		}
+		if (map[i][5] == 0 && (map[i - 1][5] == 1 || map[i - 1][5] == 2 || i == 1))
+		{
+			return 5;
+		}
+		if (map[i][3] == 0 && (map[i - 1][3] == 1 || map[i - 1][3] == 2 || i == 1))
+		{
+			return 3;
+		}
+		if (map[i][6] == 0 && (map[i - 1][6] == 1 || map[i - 1][6] == 2 || i == 1))
+		{
+			return 6;
+		}
+		if (map[i][2] == 0 && (map[i - 1][2] == 1 || map[i - 1][2] == 2 || i == 1))
+		{
+			return 2;
+		}
+		if (map[i][7] == 0 && (map[i - 1][7] == 1 || map[i - 1][7] == 2 || i == 1))
+		{
+			return 7;
+		}
+		if (map[i][1] == 0 && (map[i - 1][1] == 1 || map[i - 1][1] == 2 || i == 1))
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int compute_by_rule_base() {									// Rule Base ¿¡ ÀÇÇØ °è»êµÈ ÁöÁ¡¿¡ Âø¼ö
+	getchar();
+
+	/*
+	created by Seonyoung Kim
+	*/
+	if (game_length == 0) return 3;
+	int count = game_length + 1;
+	int color = 1 + (game_length) % 2;
+	int opponent_color = 1 + (game_length + 1) % 2;				// Àû¼º »ö ÆÇ´Ü
+	int ret;
+
+
+	ret = check_connect3(count, color);							// ·ê ±â¹İÀ¸·Î ÇßÀ» ¶§ ´ÙÀ½¼ö¿¡ 4°³¸¦ ¸¸µé ¼ö ÀÖ´ÂÁö ÆÇ´Ü
+	if (ret == 0) {												// 4°³¸¦ ¸¸µé ¼ö ¾øÀ¸´Ï »ó´ë¹æÀÌ 4°³¸¦ ¸¸µé ¼ö ÀÖ´ÂÁö ÆÇ´Ü
+		ret = check_connect3(count, opponent_color);
+		if (ret != 0) return ret;								// »ó´ë¹æÀÌ 4°³¸¦ ¸¸µé ¼ö ÀÖ´Ù¸é ¸·´Â´Ù
+	}
+	else return ret;											// 4°³¸¦ ¸¸µé ¼ö ÀÖ´Ù¸é µĞ´Ù
+
+																/*
+																¹è¿­ index º¯°æÁß...
+																*/
+	for (int j = 2; j < 6; j++) {
+		if (map[1][j] == opponent_color && map[1][j + 1] == opponent_color && map[1][j - 1] == 0 && map[1][j + 2] == 0) {
+			return j - 1;
+		}
+	}
+
+
+	for (int j = 3; j < 6; j++) {
+		if (map[1][j - 1] == opponent_color && map[1][j + 1] == opponent_color && map[1][j - 2] == 0 && map[1][j] == 0 && map[1][j + 2] == 0) {
+			return j;
+		}
+	}
+
+	if (map[1][4] == opponent_color && map[1][5] == opponent_color && a == 0) {
+		if (map[1][3] == 0) {
+			a++;
+			return 3;
+		}
+		else if (map[1][6] == 0) {
+			a++;
+			return 6;
+		}
+	}
+
+	else if (map[1][3] == opponent_color && map[1][4] == opponent_color && b == 0) {
+		if (map[1][2] == 0) {
+			b++;
+			return 2;
+		}
+		else if (map[1][5] == 0) {
+			b++;
+			return 5;
+		}
+	}
+
+	else if (map[1][2] == opponent_color && map[1][4] == opponent_color && map[1][5] == opponent_color && c == 0) {
+		if (map[1][3] == 0) {
+			c++;
+			return 3;
+		}
+	}
+
+	else if (map[1][3] == opponent_color && map[1][4] == opponent_color && map[1][6] == opponent_color && d == 0) {
+		if (map[1][5] == 0) {
+			d++;
+			return 5;
+		}
+	}
+	if (HEIGHT[GAME_STATE[count - 1]] < MAP_HEIGHT_SIZE) {				// »ó´ë¹æÀÌ ¹æ±İ Àü¿¡ µĞ µ¹ À§¿¡ µÎ´Â ·ê
+		return GAME_STATE[count - 1];
+	}
+	else {																// À§¿¡ µÑ ¼ö°¡ ¾øÀ» ¶§ ´Ù¸¥ °÷À» Ã£¾Æ¼­ µĞ´Ù.
+		return find_another_column(count);
+	}
+
+}
+
+bool check_possible_position(int stone_location) {				// Âø¼ö °¡´ÉÇÑ ÁöÁ¡ÀÎÁö ÆÇº°(=ÇØ´ç ¿­¿¡ ÀÌ¹Ì µ¹ÀÌ 6°³°¡ µé¾î°¡ ÀÖ´ÂÁö ¾Æ´ÑÁö ÆÇº°)
 	int i;
 	for (i = MAP_HEIGHT_SIZE; i > 0; i--) {
 		if (map[i][stone_location]) {
@@ -201,562 +510,57 @@ bool check_possible_position(int stone_location) {				// ì°©ìˆ˜ ê°€ëŠ¥í•œ ì§€ì 
 	}
 	return true;
 }
+void push_stone(char input_stone_location) {					// °è»êµÈ À§Ä¡¿¡ Âø¼ö
 
-int compute_by_search_algorithm() {							// Search Algorithm ì— ì˜í•´ ê³„ì‚°ëœ ì§€ì ì— ì°©ìˆ˜
-	getchar();
-	int best=-10000000, best_move=0;
-	for (int i = 1; i <= MAP_WIDTH_SIZE; i++) {
-		if (HEIGHT[i] < MAP_HEIGHT_SIZE) {
-			HEIGHT[i]++;
-			map[HEIGHT[i]][i] = 1 + game_length % 2;
-			GAME_STATE[game_length + 1] = i;
-
-			memcpy(map_temp, map, sizeof(map));
-			memcpy(HEIGHT_TEMP, HEIGHT, sizeof(HEIGHT));
-			memcpy(GAME_STATE_TEMP, GAME_STATE, sizeof(GAME_STATE));
-			game_length_temp = game_length;
-
-			pair<int, int> t;
-//			t= negamax_temp2(1, 1);
-			t= negamax_alphabeta_temp(1, -100000, 100000);
-
-			if (best <= -t.second) {
-				best = -t.second;
-				best_move = i;
-				
-				
-				
-			}
-			cout << "game_length : " << game_length + 1 << " score : " << t.second << " which? : " << i << endl;
-			map[HEIGHT[i]][i] = 0;
-			GAME_STATE[game_length + 1] = 0;
-			HEIGHT[i]--;
-
-			
-		}
-	}getchar();
-	return best_move;
-
-	/*
-		ê°œì„  ì½”ë“œ í…ŒìŠ¤íŠ¸ ì¤‘
-	*/
-	memcpy(map_temp,map,sizeof(map));
-	memcpy(HEIGHT_TEMP, HEIGHT, sizeof(HEIGHT));
-	memcpy(GAME_STATE_TEMP, GAME_STATE, sizeof(GAME_STATE));
-	game_length_temp = game_length;
-
-
-	pair<int, int> p;
-//	p = negamax_temp(0);									// through negamax
-
-//	p = negamax_temp2(0, 1);								// evaluating ë„ì…
-
-//	p = negamax_alphabeta_temp(0, -10000000, 10000000);
-	return p.first;
-}
-
-void compute_by_rule_base() {									// Rule Base ì— ì˜í•´ ê³„ì‚°ëœ ì§€ì ì— ì°©ìˆ˜
-	getchar();
-}
-
-void push_stone(char input_stone_location) {					// ê³„ì‚°ëœ ìœ„ì¹˜ì— ì°©ìˆ˜
-	
-//	getchar();
-	int i, stone_location=input_stone_location-'0';
+	int i, stone_location = input_stone_location - '0';
 	for (i = MAP_HEIGHT_SIZE; i > 0; i--) {
 		if (map[i][stone_location]) {
 			break;
 		}
 	}
 	map[i + 1][stone_location] = STONE_COLOR;
-	GAME_STATE[game_length++] = stone_location;	// í˜„ì¬ê¹Œì§€ ì–´ë–¤ ìˆœì„œë¡œ ëŒì´ ë†“ì˜€ëŠ”ì§€ ì €ì¥í•´ì¤€ë‹¤.
 	HEIGHT[stone_location]++;
-	if (STONE_COLOR==1) {						// í‘â— ì¼ ë•Œ ë°±â—‹ ì˜ ì°¨ë¡€ë¡œ ë°”ê¾¸ì–´ì¤€ë‹¤.
+	game_length++;
+	GAME_STATE[game_length] = stone_location;	// ¸î È¸Â°¿¡ ¾î¶² Ä­¿¡ µÎ¾ú´ÂÁö ÀúÀå
+	if (STONE_COLOR == 1) {						// Èæ¡Ü ÀÏ ¶§ ¹é¡Û ÀÇ Â÷·Ê·Î ¹Ù²Ù¾îÁØ´Ù.
 		STONE_COLOR = 2;
 	}
-	else {										// ë°±â—‹ ì¼ ë•Œ í‘â— ì˜ ì°¨ë¡€ë¡œ ë°”ê¾¸ì–´ì¤€ë‹¤.
+	else {										// ¹é¡Û ÀÏ ¶§ Èæ¡Ü ÀÇ Â÷·Ê·Î ¹Ù²Ù¾îÁØ´Ù.
 		STONE_COLOR = 1;
 	}
 }
 
-void print_current_map() {
+void print_current_map() {										// ÇöÀç±îÁö °ÔÀÓÀÇ ÁøÇà »óÅÂ¸¦ Ç¥Çö
 	int i, j;
 
 	for (i = MAP_HEIGHT_SIZE; i > 0; i--) {
 		for (j = 1; j <= MAP_WIDTH_SIZE; j++) {
-			if (map[i][j] == 0) {				// ë¹ˆì¹¸
-				cout << " . ";
+			if (map[i][j] == 0) {				// ºóÄ­
+				printf(" . ");
 			}
-			else if (map[i][j] == 1) {			// í‘â—‹
-				cout << "â—‹ ";
+			else if (map[i][j] == 1) {			// Èæ¡Û
+				printf("¡Û ");
 			}
-			else if (map[i][j] == 2) {			// ë°±â—
-				cout << "â— ";
+			else if (map[i][j] == 2) {			// ¹é¡Ü
+				printf("¡Ü ");
 			}
 		}
-		cout << "\n";
+		printf("\n");
 	}
 }
 
-void print_current_map_temp() {
-	int i, j;
+bool is_winning_temp(int column) {								// ÀÓ½Ã map ÀÇ »óÈ²ÀÌ ÀÌ±â´Â »óÈ²ÀÌ µÇ´ÂÁö ÆÇ´ÜÇØÁÖ´Â ÇÔ¼ö
+	int color = 1 + (game_length_temp + 1) % 2;
+	int dx, dy, cnt = 0;
 
-	for (i = MAP_HEIGHT_SIZE; i > 0; i--) {
-		for (j = 1; j <= MAP_WIDTH_SIZE; j++) {
-			if (map_temp[i][j] == 0) {				// ë¹ˆì¹¸
-				cout << " . ";
-			}
-			else if (map_temp[i][j] == 1) {			// í‘â—‹
-				cout << "â—‹ ";
-			}
-			else if (map_temp[i][j] == 2) {			// ë°±â—
-				cout << "â— ";
-			}
-		}
-		cout << "\n";
-	}
-}
-
-
-int negamax(int depth) { // í•˜......^0^;
-	if (depth == 7) {
-		return 0;
-	}
-	int i;
-	for (i = 1; i <= MAP_WIDTH_SIZE; i++) {
-		if (check_possible_position(i)) {
-
-		}
-	}
-	
-}
-
-pair<int, int> negamax_alphabeta_temp(int depth, int alpha, int beta) {
-	int color = 1 + (game_length + depth) % 2; // 1 ì„ ê³µ(í‘) 2 í›„ê³µ(ë°±)
-	if (depth == 10 || MAX_GAME_LENGTH - game_length_temp <= 0) {
-		int i, j;
-		/*		for (i = 1; i <= game_length_temp; i++) cout << GAME_STATE_TEMP[i] << " ";
-		cout << endl;
-		for (i = 1; i <= 7; i++) {
-		cout << HEIGHT_TEMP[i] << " ";
-		}
-		cout << endl;
-		print_current_map_temp();
-		cout << "í‰ê°€ê°’ : " << evaluate_state_temp() << endl;
-		getchar();*/
-		if (color == 1) {
-			return make_pair(0, evaluate_board_state());
-//			return make_pair(0, evaluate_state_temp());
-		}
-		else {
-			return make_pair(0, -evaluate_board_state());
-//			return make_pair(0, -evaluate_state_temp());
-		}
-		//		return make_pair(0,evaluate_state_temp());
-	}
-	int i, best = -100000, value=0;
-	int best_move = 0;
-	pair<int, int> p;
-	for (i = 1; i <= MAP_WIDTH_SIZE; i++) {
-		if (HEIGHT_TEMP[i] < MAP_HEIGHT_SIZE) {
-
-			HEIGHT_TEMP[i]++;
-			game_length_temp++;
-			GAME_STATE_TEMP[game_length + depth + 1] = i;
-			map_temp[HEIGHT_TEMP[i]][i] = color;
-
-			p = negamax_alphabeta_temp(depth + 1,-beta,-alpha);
-			value = -p.second;
-			
-			//			value = -negamax_temp(depth + 1).second;		// ë‹¤ìŒ ë ˆë²¨ íƒìƒ‰
-
-			map_temp[HEIGHT_TEMP[i]][i] = 0;
-			GAME_STATE_TEMP[game_length + depth + 1] = 0;
-			game_length_temp--;
-			HEIGHT_TEMP[i]--;
-
-			if (best <= value) {						// ì¢‹ì€ ê°’ì„ ì°¾ëŠ”ë‹¤. best
-				best = value;
-				best_move = i;
-			}
-			if (alpha < value) {
-				alpha = value;
-				if (alpha >= beta) break;
-			}
-			
-			//			best = max2(best, value);				// ì¢‹ì€ ê°’ì„ ì°¾ëŠ”ë‹¤. best
-		}
-	}
-	return make_pair(best_move, best);
-}
-
-pair<int, int> negamax_alphabeta_temp2(int depth, int alpha, int beta) {
-
-}
-
-int evaluate_state_temp() { // í•˜.............^0^;
-	int i, j, value=0;
-	for (i = 1; i <= MAP_HEIGHT_SIZE; i++) {
-		for (j = 1; j <= MAP_WIDTH_SIZE; j++) {
-			if (map_temp[i][j] == 1) {
-				value += heuristic_table[i][j];
-			}
-			else if (map_temp[i][j] == 2) {
-				value -= heuristic_table[i][j];
-			}
-		}
-	}
-	return value;
-}
-
-int evaluate_vertically(int column, int color) {			// ëì—ì„œë¶€í„° ì—°ì†ëœ ë™ì¼í•œ ìƒ‰ìƒì˜ ëŒì´ ë§ì„ìˆ˜ë¡ ê³ ë“ì 
-	int i, value=0, cnt;
-	int v[4] = { 0,8,128,10000 };
-	cnt = 0;
-	for (i = HEIGHT_TEMP[column]; i >= 1; i--) {
-		if (map_temp[i][column] == color) cnt++;
-		else break;
-	}
-	if (cnt < 4) return v[cnt];
-	else return v[3];
-}
-
-int evaluate_vertically_temp(int column, int color) {		// evaluate_vertically ê°œì„ 
-	int i, value = 0, cnt=0;
-	int v[5] = { 0,1,8,128,10000 };
-	for (i = HEIGHT_TEMP[column]; i >= 1; i--) {
-		if (map_temp[i][column] == color) cnt++;
-		else break;
-		if (cnt == 4) return v[4];
-	}
-	if (HEIGHT_TEMP[column] == MAP_HEIGHT_SIZE) return 0;	// ë¬´ì˜ë¯¸
-	return v[cnt];
-}
-
-int evaluate_horizontally(int column, int row, int color) {				// ì¤‘ê°„ì— ë„ì›Œì„œ ë†“ëŠ” ê²½ìš°ì˜ ìˆ˜ëŠ”? ë‚˜ì¤‘ì—..
-	int i, j, value = 0, cnt;
-	int v[4] = { 0,8,128,10000 };
-	cnt = 0;
-	int nb = 0;
-	for (i = column; i <= MAP_WIDTH_SIZE; i++) {
-		nb++;
-		if (map_temp[row][i] == color) cnt++;
-		else if (map_temp[row][i] != 0) break;							// ìƒëŒ€ë°©ì˜ ëŒì´ ë§‰ê³  ìˆë‹¤. 00X ê°™ì€ ê²½ìš°
-		if (nb == 4) break;
-//		else if (map_temp[row][i] != 0) break;
-	}
-	if (i == MAP_WIDTH_SIZE) {											// column=7ê¹Œì§€ cntë§Œí¼ì˜ ëŒì´ ì—°ì†í•´ì„œ ë†“ì—¬ìˆëŠ”ë°(ì¦‰, ëê¹Œì§€ ë†“ì—¬ìˆëŠ”ë°)
-		if (map_temp[row][column-1]!=color) {							// ì™¼ìª½ëì—ë„ ë‹¤ë¥¸ ëŒë¡œ ë§‰í˜€ìˆë‹¤ë©´(X000ë ì´ê±°ë‚˜ X0.00ë<<ë‘ê°€ì§€ ê²½ìš°ì¤‘ í•˜ë‚˜)
-			if (nb != 4) cnt = 0;										// X000ë ì´ë¯€ë¡œ ìœ ì˜ë¯¸í•˜ì§€ ì•Šì€ ìƒíƒœ(ì–‘ ì˜†ì´ ë§‰í˜€ìˆìŒ)
-		}
-	}
-//	else if(map_temp[row][])
-	if (cnt < 4) return v[cnt];
-	else return v[3];
-}
-
-int evaluate_horizontally_temp(int row, int color) {					// ê°€ë¡œ ì ìˆ˜ ì „ë¶€ íƒìƒ‰ (evaluate_horizontally ì—ì„œ ê°œì„ )
-	int i, j, value = 0, cnt;
-	int v[5] = { 0,1,8,128,10000 };
-	cnt = 0;
-	int nb = 0, blank=0, st, block;
-	int column;
-	for (column = 1; column <= MAP_WIDTH_SIZE; column++) {				// ì²˜ìŒìœ¼ë¡œ colorì¸ ëŒì´ ë‚˜ì™”ì„ ë•Œ
-		if (map_temp[row][column] == color) break;
-	}
-	for (;column <= MAP_WIDTH_SIZE;column++) {				// ì™¼ìª½ ëì—ì„œë¶€í„° ê°™ì€ê²Œ ìµœëŒ€ 4ê°œê¹Œì§€ ìˆëŠ”ì§€ íƒìƒ‰
-		
-		if (map_temp[row][column] == color) {
-			nb = 0;
-			st = column;								// ì™¼ìª½ ì‹œì‘ì 	
-			block = 0;
-			cnt = 0;
-			for (;column <= MAP_WIDTH_SIZE;column++) {
-				nb++;
-				if (map_temp[row][column] == color) cnt++;				// ê°™ì€ ëŒì´ ì—°ì†ìœ¼ë¡œ ë†“ì¸ë‹¤. (OOO, O.O ê°™ì€ ê²½ìš°ë„ í¬í•¨)
-				else if (map_temp[row][column] == 0) {					// ë¹ˆì¹¸ì´ ë‘ê°œë©´ ê·¸ë§Œ			(O..OëŠ” ë°°ì œ)
-					blank++;
-					if (blank == 2) break;
-				}
-				else {													// ìƒëŒ€ë°©ì˜ ëŒì´ ë§‰ê³  ìˆë‹¤ë©´(ì˜¤ë¥¸ìª½ì´ ë§‰í˜€ìˆë‹¤)
-					block = 1;
-					break;
-				}
-				if (cnt==4)												// four in a row
-					break;
-			}
-			
-			if (st == 1 || (map_temp[row][st-1]!=0 && map_temp[row][st-1]!=color)) {		// ì™¼ìª½ì´ ë§‰í˜€ìˆë‹¤.
-				if (block)																	// ì˜¤ë¥¸ìª½ë„ ë§‰í˜€ìˆë‹¤=ë¬´ì˜ë¯¸í•œ ëŒì˜ ì—°ì†
-					cnt = 0;
-			}
-			if (cnt == 4) return v[4];
-			value += v[cnt];
-		}
-	}
-	return value;
-
-}
-
-int evaluate_diagonally(int column, int row, int color) {
-	int i, value = 0, cnt;
-	int v[5] = { 0,1,8,128,10000 };
-	cnt = 0;
-	int y, x;
-	y = row;
-	x = column;
-	int nb = 0;
-	for (;y >= 1 && x >= 1; y--, x--) {			// ì¢Œí•˜í–¥ ëŒ€ê°ì„ íƒìƒ‰
-		if (map_temp[y][x] == color) cnt++;
-		//		else if (map_temp[y][x] != color) break;
-
-	}
-	if (cnt < 4) value += v[cnt];
-	else value += v[3];
-	cnt = 0;
-	y = row;
-	x = column;
-	for (;y <= MAP_HEIGHT_SIZE && x <= MAP_WIDTH_SIZE; y++, x++) {	// ìš°í•˜í–¥ ëŒ€ê°ì„ íƒìƒ‰
-		if (map_temp[y][x] == color) cnt++;
-		//		else if (map_temp[y][x] != color) break;
-		nb++;
-		if (nb == 4) break;
-	}
-	if (cnt < 4) return value + v[cnt];
-	return value + v[4];
-}
-
-int evaluate_diagonally_temp(int column, int row, int color) {				// ëŒ€ê° íƒìƒ‰ ê°œì„ (ê°œì„ ì€ ëëŠ”ë° íš¨ê³¼ê°€ ì—†ë„¤)
-	int i, value = 0, cnt;
-	int v[5] = { 0,1,8,128,10000 };
-	cnt = 0;
-	int y, x;
-	y = row;
-	x = column;
-	int nb = 0, bl=0;
-	for (;y >= 1 && x >= 1; y--, x--) {			// ì¢Œí•˜í–¥ ëŒ€ê°ì„ íƒìƒ‰
-		nb++;
-		if (map_temp[y][x] == color) cnt++;
-		else if (map_temp[y][x] == 0) {
-			bl++;
-			if (bl == 2) break;
-		}
-		else break;								// ìƒ‰ì´ ë‹¤ë¥¸ ëŒ
-		if (nb == 4) break;
-	}
-	if (cnt < 4) {
-		int useless = 0;
-		if (row == MAP_HEIGHT_SIZE) useless++;
-		if (bl == 0 && nb != 4) useless++;
-		if (useless == 2) cnt = 0;
-		value += v[cnt];
-	}
-	else value += v[4];
-	cnt = 0;
-	y = row;
-	x = column;
-	nb = 0;
-	bl = 0;
-	for (;y <= MAP_HEIGHT_SIZE && x <= MAP_WIDTH_SIZE; y++, x++) {	// ìš°í•˜í–¥ ëŒ€ê°ì„ íƒìƒ‰
-		nb++;
-		if (map_temp[y][x] == color) cnt++;
-		else if (map_temp[y][x] == 0){
-			bl++;
-			if (bl == 2) break;
-		}
-		else break;
-
-		if (nb == 4) break;
-	}
-	if (cnt < 4) {
-		int useless = 0;
-		if (row == MAP_HEIGHT_SIZE) useless++;
-		if (bl == 0 && nb != 4) useless++;
-		if (useless == 2) cnt = 0;
-//		return max2(value, v[cnt]);
-		return value + v[cnt];
-	}
-	return value + v[4];
-}
-
-int evaluate_board_state() {					// color ë¥¼ ë°›ìœ¼ë©´ + - ë¥¼ ê²°ì •í•´ì„œ ì´ê¸°ê³  ì§€ëŠ”ê±¸ ì„¸ë¶„í™” ì‹œí‚¬ ìˆ˜ ìˆì„ê¹Œ? ì•„ë‹ˆë©´ í˜¸ì¶œí•œ ë¶€ë¶„ì—ì„œ ë°”ë¡œ ê²°ì •í•´ì¤„ìˆ˜ ìˆëŠ”ê±´ê°€?
-	int i, j;
-	int value_black = 0;
-	int value_white = 0;
-	int v[4] = { 1,8,128,10000 };
-	for (i = 1; i <= MAP_WIDTH_SIZE; i++) {
-		if (map_temp[HEIGHT_TEMP[i]][i] == 1) {
-//			value_black += evaluate_vertically(i, 1);
-			value_black += evaluate_vertically_temp(i, 1);
-//			value_black = max2(value_black, evaluate_vertically_temp(i, 1));
-
-		}
-		else if (map_temp[HEIGHT_TEMP[i]][i] == 2) {
-//			value_white += evaluate_vertically(i, 2);
-			value_white += evaluate_vertically_temp(i, 2);
-//			value_white = max2(value_white, evaluate_vertically_temp(i, 2));
-		}
-	}
-	for (i = 1; i <= MAP_HEIGHT_SIZE; i++) {
-		for (j = 1; j <= MAP_WIDTH_SIZE; j++) {
-			if (map_temp[i][j] == 1) {
-				value_black += evaluate_horizontally_temp(i, 1);
-//				value_black = max2(value_black, evaluate_horizontally_temp(i, 1));
-				break;
-			}
-			else if (map_temp[i][j] == 2) {
-				value_white += evaluate_horizontally_temp(i, 2);
-//				value_white = max2(value_white, evaluate_horizontally_temp(i, 2));
-				break;
-			}
-		}
-	}
-	for (i = 1; i <= MAP_HEIGHT_SIZE; i++) {
-		for (j = 1; j <= MAP_WIDTH_SIZE; j++) {
-			if (map_temp[i][j] == 1) {			// ì„ ê³µì¼ ë•Œ ì ìˆ˜ ê³„ì‚°
-//				value_black += evaluate_vertically(i, 1);
-//				value_black += evaluate_horizontally(i, j, 1);
-				value_black += evaluate_diagonally_temp(i, j, 1);
-//				value_black = max2(value_black,evaluate_diagonally(i, j, 1));
-			}
-			else if (map_temp[i][j] == 2) {
-//				value_white += evaluate_vertically(i, 2);
-//				value_white += evaluate_horizontally(i, j, 2);
-				value_white += evaluate_diagonally_temp(i, j, 2);
-//				value_white = max2(value_white,evaluate_diagonally(i, j, 2));
-			}
-		}
-	}
-	return value_black - value_white;
-}
-
-pair<int,int> negamax_temp2(int depth, int color) {
-	if (depth == 8 || MAX_GAME_LENGTH - game_length_temp <= 0) {
-//		if(color==1) return make_pair(0, evaluate_board_state());
-		int i, j;
-/*		for (i = MAP_HEIGHT_SIZE; i >= 1; i--) {
-			for (j = 1; j <= MAP_WIDTH_SIZE; j++) {
-				cout << map_temp[i][j] << " ";
-			}
-			cout << endl;
-		}
-		cout << "score : " << evaluate_board_state() << endl;
-		getchar();*/
-		return make_pair(0, color*evaluate_board_state());
-	}
-	int i, ccolor=1+game_length_temp%2;
-	int best = -1000000, best_move;
-	int value;
-	pair<int, int> p;
-	for (i = 1; i <= MAP_WIDTH_SIZE; i++) {
-		if (HEIGHT_TEMP[i] < MAP_HEIGHT_SIZE) {
-			HEIGHT_TEMP[i]++;
-			game_length_temp++;
-			GAME_STATE_TEMP[game_length + depth + 1] = i;
-			map_temp[HEIGHT_TEMP[i]][i] = ccolor;
-
-			p = negamax_temp2(depth + 1,-color);
-			value = -p.second;
-
-			//			value = -negamax_temp(depth + 1).second;		// ë‹¤ìŒ ë ˆë²¨ íƒìƒ‰
-			if (best <= value) {						// ì¢‹ì€ ê°’ì„ ì°¾ëŠ”ë‹¤. best
-				best = value;
-				best_move = i;
-/*				for (int k = MAP_HEIGHT_SIZE; k >= 1; k--) {
-					for (int j = 1; j <= MAP_WIDTH_SIZE; j++) {
-						cout << map_temp[k][j] << " ";
-					}
-					cout << endl;
-				}
-				cout << "score : " << best << "   / location : " << i << endl;
-				getchar();*/
-			}
-			map_temp[HEIGHT_TEMP[i]][i] = 0;
-			GAME_STATE_TEMP[game_length + depth + 1] = 0;
-			game_length_temp--;
-			HEIGHT_TEMP[i]--;
-
-			
-			
-		}
-	}
-	return make_pair(best_move, best);
-}
-
-pair<int,int> negamax_temp(int depth) { // ì œë°”ã…ã…ã…ã…ã…ã…ã…ã…ã…ã„¹
-	int color = 1 + (game_length + depth) % 2; // 1 ì„ ê³µ(í‘) 2 í›„ê³µ(ë°±)
-	if (depth == 8 || MAX_GAME_LENGTH-game_length_temp<=0) {
-		int i, j;
-/*		for (i = 1; i <= game_length_temp; i++) cout << GAME_STATE_TEMP[i] << " ";
-		cout << endl;
-		for (i = 1; i <= 7; i++) {
-			cout << HEIGHT_TEMP[i] << " ";
-		}
-		cout << endl;
-		print_current_map_temp();
-		cout << "í‰ê°€ê°’ : " << evaluate_state_temp() << endl;
-		getchar();*/
-		if (color == 1) {
-			return make_pair(0, evaluate_state_temp());
-		}
-		else {
-			return make_pair(0, -evaluate_state_temp());
-		}
-//		return make_pair(0,evaluate_state_temp());
-	}
-	int i, best=-100000, value;
-	int best_move=0;
-	pair<int, int> p;
-	for (i = 1; i <= MAP_WIDTH_SIZE; i++) {
-		if (HEIGHT_TEMP[i] < MAP_HEIGHT_SIZE) {
-/*			if (is_winning_temp(i)) {			// colorê°€ iì— ë’€ë”ë‹ˆ ì´ê²¼ì„ ë•Œ (color == 1 //ì„ ê³µ, color == 2 // í›„ê³µ)
-				if(color==1){
-					return make_pair(i, 10000);	// ???????????????
-				}
-				else {
-					return make_pair(i, -10000); // ??????????????
-
-				}
-			}*/
-			HEIGHT_TEMP[i]++;
-			game_length_temp++;
-			GAME_STATE_TEMP[game_length + depth + 1] = i;
-			map_temp[HEIGHT_TEMP[i]][i] = color;
-
-			p = negamax_temp(depth + 1);
-			value = -p.second;
-
-//			value = -negamax_temp(depth + 1).second;		// ë‹¤ìŒ ë ˆë²¨ íƒìƒ‰
-
-			map_temp[HEIGHT_TEMP[i]][i] = 0;
-			GAME_STATE_TEMP[game_length + depth + 1] = 0;
-			game_length_temp--;
-			HEIGHT_TEMP[i]--;
-
-			if (best <= value) {						// ì¢‹ì€ ê°’ì„ ì°¾ëŠ”ë‹¤. best
-				best = value;
-				best_move = i;
-			}
-//			best = max2(best, value);				// ì¢‹ì€ ê°’ì„ ì°¾ëŠ”ë‹¤. best
-		}
-	}
-	return make_pair(best_move,best);//???????????????????????????????
-}
-
-
-
-bool is_winning_temp(int column) {
-	int color = 1 + game_length_temp%2;
-	int dx, dy, cnt=0;
-	
-	if(HEIGHT_TEMP[column]>=3													// ì„¸ë¡œë¡œ ë§Œë“¤ì–´ì§„ ê²½ìš°
-		&& map_temp[HEIGHT_TEMP[column]-1][column]==color
-		&& map_temp[HEIGHT_TEMP[column]-2][column]==color
+	if (HEIGHT_TEMP[column] >= 3													// ¼¼·Î·Î ¸¸µé¾îÁø °æ¿ì
+		&& map_temp[HEIGHT_TEMP[column] - 1][column] == color
+		&& map_temp[HEIGHT_TEMP[column] - 2][column] == color
 		&& map_temp[HEIGHT_TEMP[column] - 3][column] == color) return true;
-	for (dy = -1; dy <= 1; dy++) {												// ëŒ€ê°ì„  ë° ê°€ë¡œë¡œ ë§Œë“¤ì–´ì§„ ê²½ìš°
+	for (dy = -1; dy <= 1; dy++) {												// ´ë°¢¼± ¹× °¡·Î·Î ¸¸µé¾îÁø °æ¿ì
 		cnt = 0;
 		for (dx = -1; dx <= 1; dx += 2) {
-			for (int x = column + dx, y = HEIGHT_TEMP[column] + dx*dy; x >= 1 && x <= MAP_WIDTH_SIZE && y >= 1 && y <= MAP_HEIGHT_SIZE && map_temp[y][x] == color;) {
+			for (int x = column + dx, y = HEIGHT_TEMP[column] + dx * dy; x >= 1 && x <= MAP_WIDTH_SIZE && y >= 1 && y <= MAP_HEIGHT_SIZE && map_temp[y][x] == color;) {
 				x += dx;
 				y += dx * dy;
 				cnt++;
@@ -767,15 +571,15 @@ bool is_winning_temp(int column) {
 	return false;
 }
 
-bool is_winning(int column) {
-	int color = 1 + (game_length+1) % 2;
+bool is_winning(int column) {									// mapÀÇ »óÈ²ÀÌ ÀÌ±â´Â »óÈ²ÀÌ µÇ´ÂÁö ÆÇ´ÜÇØÁÖ´Â ÇÔ¼ö
+	int color = 1 + (game_length + 1) % 2;
 	int dx, dy, cnt = 0;
 
-	if (HEIGHT[column] >= 3													// ì„¸ë¡œë¡œ ë§Œë“¤ì–´ì§„ ê²½ìš°
+	if (HEIGHT[column] >= 3													// ¼¼·Î·Î ¸¸µé¾îÁø °æ¿ì
 		&& map[HEIGHT[column] - 1][column] == color
 		&& map[HEIGHT[column] - 2][column] == color
 		&& map[HEIGHT[column] - 3][column] == color) return true;
-	for (dy = -1; dy <= 1; dy++) {												// ëŒ€ê°ì„  ë° ê°€ë¡œë¡œ ë§Œë“¤ì–´ì§„ ê²½ìš°
+	for (dy = -1; dy <= 1; dy++) {												// ´ë°¢¼± ¹× °¡·Î·Î ¸¸µé¾îÁø °æ¿ì
 		cnt = 0;
 		for (dx = -1; dx <= 1; dx += 2) {
 			for (int x = column + dx, y = HEIGHT[column] + dx * dy; x >= 1 && x <= MAP_WIDTH_SIZE && y >= 1 && y <= MAP_HEIGHT_SIZE && map[y][x] == color;) {
@@ -787,4 +591,300 @@ bool is_winning(int column) {
 		if (cnt >= 3) return true;
 	}
 	return false;
+}
+
+int minmax_alphabeta_pruning(int depth, int alpha1, int beta1) {				// minmax with alphabeta pruning
+	int value = 0;
+	if (MAX_GAME_LENGTH - game_length_temp <= 0) return evaluate_board_state();
+	if (depth >= 12) {														// 12¼ö ¾Õ±îÁö ³»´Ùº¸°Å³ª 12¼ö ÀÌÇÏ °ÔÀÓÀÇ ³¡±îÁö ³»´Ùº¸°Å³ª
+		if (game_length_temp > 12) {											// °ÔÀÓÀÇ ±æÀÌ°¡ ±æ¾îÁö¸é
+			if (depth == 12 + (game_length_temp - 13) / 5) {					// ¼ö¸¦ ´õ ³»´Ùº»´Ù
+				return evaluate_board_state();
+			}
+		}
+		else {
+			return evaluate_board_state();
+		}
+	}
+	int i;
+	int best;
+	if ((game_length + depth) % 2 == 0) {				// ¼±°ø max°ªÀ» ¸®ÅÏ
+		best = -1000000;
+		for (i = 1; i <= MAP_WIDTH_SIZE; i++) {
+			if (HEIGHT_TEMP[i] < MAP_HEIGHT_SIZE) {		// ÇØ´ç ¿­¿¡ µÑ ¼ö ÀÖ´Ù¸é
+				HEIGHT_TEMP[i]++;						// ÇÏ³ª¸¦ µÖº»´Ù
+				map_temp[HEIGHT_TEMP[i]][i] = 1;
+				game_length_temp++;
+				if (is_winning_temp(i)) {				// ±Ùµ¥ ¿©±â¿¡ µÎ¸é ÀÌ±ä´Ù?
+					game_length_temp--;						// ÀÓ½Ã¹è¿­ ¿øº¹ <- ½ÇÁ¦ µ¹Àº push_stone ¿¡¼­ ³Ö¾îÁÖ°Ô µÇ°í, ÇâÈÄ ´Ù¸¥ ³ëµå¿¡¼­ °á°ú°ª¿¡ ÁöÀåÀ» ÁÖÁö ¾Ê±â À§ÇØ ÀÓ½Ã¹è¿­Àº ³Ö±â Àü »óÅÂ·Î µ¹·ÁÁÖ¾î¾ßÇÑ´Ù.
+					map_temp[HEIGHT_TEMP[i]][i] = 0;
+					HEIGHT_TEMP[i]--;
+					return (21 - (game_length_temp + 1) / 2) * 10000;		// ¾ó¸¸Å­ÀÇ È½¼ö¸¦ ¾Æ²¸¼­ °ÔÀÓ¿¡¼­ ½Â¸®ÇÏ´ÂÁö, ÃÑ °ÔÀÓÀÇ ±æÀÌ´Â 42È¸ ÀÌ°í, °¢ ÇÃ·¹ÀÌ¾î´Â 21È¸¾¿ °ÔÀÓÀ» ÇÃ·¹ÀÌ ÇÒ ¼ö ÀÖ´Ù.
+				}
+
+				value = minmax_alphabeta_pruning(depth + 1, alpha1, beta1);	// ´ÙÀ½ ¼ö Å½»ö
+				if (best <= value) {					// ´ÙÀ½ ¼ö¿¡¼­ °¡Á®¿Â °ªÀÌ ´õ ÁÁ´Ù¸é
+					best = value;
+				}
+				game_length_temp--;						// ´ÙÀ½ ¼ö¿¡ ÁöÀåÀ» ÁÖÁö ¾Ê±â À§ÇØ ÀÓ½Ã¹è¿­À» ³Ö±â Àü »óÅÂ·Î µ¹·ÁÁØ´Ù.
+				map_temp[HEIGHT_TEMP[i]][i] = 0;
+				HEIGHT_TEMP[i]--;
+				if (alpha1 < best) {					// alpha ¹üÀ§ ÁÙ¿©°¡´Â Áß
+					alpha1 = best;
+					if (beta1 <= alpha1) break;			// alpha cut
+				}
+			}
+		}
+	}
+	else {												// ÈÄ°ø min°ªÀ» ¸®ÅÏ
+		best = 1000000;
+		for (i = 1; i <= MAP_WIDTH_SIZE; i++) {
+			if (HEIGHT_TEMP[i] < MAP_HEIGHT_SIZE) {		// ÇØ´ç ¿­¿¡ µÑ ¼ö ÀÖ´Ù¸é
+				HEIGHT_TEMP[i]++;						// µÖº¸´Âµ¥
+				map_temp[HEIGHT_TEMP[i]][i] = 2;
+				game_length_temp++;
+				if (is_winning_temp(i)) {				// ±Ùµ¥ ¿©±â¿¡ µÎ¸é ÀÌ±ä´Ù?
+					game_length_temp--;							// ÀÓ½Ã¹è¿­ ¿øº¹
+					map_temp[HEIGHT_TEMP[i]][i] = 0;
+					HEIGHT_TEMP[i]--;
+					return -((21 - (game_length_temp + 1) / 2) * 10000);		// ¾ó¸¸Å­ÀÇ È½¼ö¸¦ ¾Æ²¸¼­ °ÔÀÓ¿¡¼­ ½Â¸®ÇÏ´ÂÁö, ÈÄ°øÀÇ °ªÀÌ¹Ç·Î À½¼ö(-)·Î ¹İÈ¯(?)
+				}
+				value = minmax_alphabeta_pruning(depth + 1, alpha1, beta1);		// ´ÙÀ½ ¼ö Å½»ö
+				if (best >= value) {
+					best = value;
+				}
+				game_length_temp--;
+				map_temp[HEIGHT_TEMP[i]][i] = 0;
+				HEIGHT_TEMP[i]--;
+				if (beta1 > best) {						// beta ¹üÀ§ ÁÙ¿©°¡´Â Áß
+					beta1 = best;
+					if (beta1 <= alpha1) break;			// beta cut
+				}
+			}
+		}
+	}
+	return best;
+}
+
+int minmax(int depth) {													// minmax
+	int value = 0;
+	if (depth >= 8 || MAX_GAME_LENGTH - game_length_temp <= 0) {
+		if (game_length_temp > 13) {
+			if (depth == 8 + (game_length_temp - 13) / 8) {				// ½Ã°£ÀÌ Áö³¯ ¼ö·Ï depth Å½»ö °­È­
+				return evaluate_board_state();							// ÇöÀç º¸µåÀÇ »óÅÂ Á¡¼ö¸¦ ¹İÈ¯ÇØÁØ´Ù. >0 ÀÏ °æ¿ì ¼±°øÀÌ À¯¸® <0 ÀÏ °æ¿ì ÈÄ°øÀÌ À¯¸®ÇÑ »óÈ²(black-whiteÀÌ¹Ç·Î)
+			}
+		}
+		return evaluate_board_state();
+	}
+	int i;
+	int best = -1000000;
+	if ((game_length + depth) % 2) best = 1000000;
+	if ((game_length + depth) % 2 == 0) {				// ¼±°ø max°ªÀ» ¸®ÅÏ
+		best = -1000000;
+		for (i = 1; i <= MAP_WIDTH_SIZE; i++) {			// µÑ ¼ö ÀÖ´Â Ä­À» ´Ù µ¹¾Æº¸´Âµ¥
+			if (HEIGHT_TEMP[i] < MAP_HEIGHT_SIZE) {		// ÇØ´ç Ä­¿¡ ³ôÀÌ°¡ ÃæºĞÇØ¼­ ³ÖÀ» ¼ö ÀÖ´Ù¸é
+
+				HEIGHT_TEMP[i]++;						// ÀÓ½Ã¹è¿­À» ÅëÇØ ¾Õ ¼ö¸¦ ³»´Ùº¸´Â °úÁ¤
+				map_temp[HEIGHT_TEMP[i]][i] = 1;
+				game_length_temp++;
+				if (is_winning_temp(i)) {				// ±Ùµ¥ ¿©±â¿¡ µÎ¸é ÀÌ±ä´Ù?
+					game_length_temp--;						// ÀÓ½Ã¹è¿­ ¿øº¹
+					map_temp[HEIGHT_TEMP[i]][i] = 0;
+					HEIGHT_TEMP[i]--;
+					return (21 - (game_length_temp + 1) / 2) * 10000;		// ¾ó¸¸Å­ÀÇ È½¼ö¸¦ ¾Æ²¸¼­ °ÔÀÓ¿¡¼­ ½Â¸®ÇÏ´ÂÁö
+				}
+				value = minmax(depth + 1);				// ÇÑ ¼ö ¾ÕÀ» ´õ º¸·¯°£´Ù
+				if (best <= value) {					// ¾Õ ¼­ º» ¼öµéÀÇ °ªÀÌ ´Ù¸¥ À§Ä¡¿¡ µĞ °Í º¸´Ù ÁÁÀº °á°ú¸¦ ¾ò´Â´Ù¸é
+					best = value;						// °ªÀ» °»½Å
+				}
+				game_length_temp--;						// ÀÓ½Ã¹è¿­ ¿øº¹
+				map_temp[HEIGHT_TEMP[i]][i] = 0;
+				HEIGHT_TEMP[i]--;
+			}
+		}
+	}
+	else {												// ÈÄ°ø min°ªÀ» ¸®ÅÏ
+		for (i = 1; i <= MAP_WIDTH_SIZE; i++) {			// µÑ ¼ö ÀÖ´Â Ä­À» ´Ù µ¹¾Æº¸´Âµ¥
+			if (HEIGHT_TEMP[i] < MAP_HEIGHT_SIZE) {		// ÇØ´ç Ä­¿¡ ³ôÀÌ°¡ ÃæºĞÇØ¼­ ³ÖÀ» ¼ö ÀÖ´Ù¸é
+														/*				cout << "game_length : " << game_length << " game_length_temp : " << game_length_temp << " i : " << i << endl;
+														print_current_map_temp();
+														getchar();*/
+				HEIGHT_TEMP[i]++;						// ÀÓ½Ã¹è¿­À» ÀÌ¿ëÇØ¼­ ¾Õ ¼ö¸¦ ³»´Ùº¼ ¼ö ÀÖµµ·Ï ¼¼ÆÃ
+				map_temp[HEIGHT_TEMP[i]][i] = 2;
+				game_length_temp++;
+				if (is_winning_temp(i)) {				// ±Ùµ¥ ¿©±â¿¡ µÎ¸é ÀÌ±ä´Ù?
+					game_length_temp--;							// ÀÓ½Ã¹è¿­ ¿øº¹
+					map_temp[HEIGHT_TEMP[i]][i] = 0;
+					HEIGHT_TEMP[i]--;
+					return -((21 - (game_length_temp + 1) / 2) * 10000);		// ¾ó¸¸Å­ÀÇ È½¼ö¸¦ ¾Æ²¸¼­ °ÔÀÓ¿¡¼­ ½Â¸®ÇÏ´ÂÁö, ÈÄ°øÀÇ °ªÀÌ¹Ç·Î À½¼ö(-)·Î ¹İÈ¯(?)
+				}
+				value = minmax(depth + 1);				// ÇÑ ¼ö ¾Õ ´õ º¸·¯°£´Ù
+				if (best >= value) {					// ¾Õ¼­ º» ¼öµéÀÇ °ªÀÌ ´Ù¸¥ À§Ä¡¿¡ µĞ °Íº¸´Ù ÁÁÀº °á°ú¸¦ ¾ò´Â´Ù¸é(ÈÄ°øÀÇ °ªÀÌ ÁÁÀ¸·Á¸é °ªÀÌ ³·À» ¼ö·Ï ÁÁ´Ù)
+					best = value;
+				}
+				game_length_temp--;							// ÀÓ½Ã¹è¿­ ¿øº¹
+				map_temp[HEIGHT_TEMP[i]][i] = 0;
+				HEIGHT_TEMP[i]--;
+			}
+		}
+	}
+	return best;
+}
+int evaluate_vertically_temp(int column, int color) {		// evaluate_vertically ¼¼·ÎÀÇ Á¡¼ö¸¦ È®ÀÎÇØÁØ´Ù
+	int i, value = 0, cnt = 0;
+	int v[5] = { 0,1,3,9,100 };								// heuristic value
+	for (i = HEIGHT_TEMP[column]; i >= 1; i--) {
+		if (map_temp[i][column] == color) cnt++;
+		else break;
+		if (cnt == 4) return v[4];
+	}
+	if (HEIGHT_TEMP[column] == MAP_HEIGHT_SIZE) return 0;	// ¹«ÀÇ¹Ì
+	return v[cnt];
+}
+
+int evaluate_horizontally_temp(int row, int column, int color) {					// °¡·Î Á¡¼ö ÀüºÎ Å½»ö
+	int value = 0;
+	int i;
+	int cnt = 0;
+	int nb = 0;
+	int y, x;
+	int v[5] = { 0,1,3,9,100 };
+	y = row;
+	x = column;
+
+	for (;x <= MAP_WIDTH_SIZE && nb < 4; x++) {								// ÇØ´çÁöÁ¡ºÎÅÍ 4Ä­ °¡·Î·Î °è»ê
+		if (map_temp[y][x] == color) cnt++;
+		else if (map_temp[y][x] != 0) break;								// ´Ù¸¥ »öÀÌ Áß°£¿¡ ³ª¿À¸é count Á¾·á
+		nb++;
+	}
+	bool left_block = false;												// ¿ŞÂÊÀÌ ¸·Èù »óÅÂÀÎÁö
+	bool right_block = false;												// ¿À¸¥ÂÊÀÌ ¸·Èù »óÅÂÀÎÁö
+	if (cnt == 4) {															// four in a row!
+		return v[4];
+	}
+	else if (nb<4) {															// 4Ä­±îÁö ´Ù ºÃÀ¸¸é ¸·ÇôÀÖ´Â °ÍÀº »ó°üÀÌ ¾ø´Ù		
+		if (column == 1) {													// °¡Àå ÁÂÃø¿¡ µ¹ÀÌ ÀÖ´Ù´Â °ÍÀº ¿ŞÂÊÀÌ ¸·ÇôÀÖ´Ù´Â ¶æ
+			left_block = true;
+		}
+		else {
+			if (map_temp[row][column - 1] != color && map_temp[row][column - 1] != 0) {	// °¡Àå ÁÂÃø¿¡ ÀÖÁö´Â ¾ÊÁö¸¸ ¿ŞÂÊ ³¡ µ¹ ¿·¿¡ »öÀÌ ´Ù¸¥ µ¹ÀÌ ÀÖ´Ù´Â °Í ¿ª½Ã ¿ŞÂÊÀÌ ¸·Çô ÀÖ´Ù´Â ¶æ
+				left_block = true;
+			}
+		}
+		if (x == MAP_WIDTH_SIZE + 1) {										// x°¡ °¡·ÎÀÇ ³¡À» ³Ñ¾î°¬´Ù´Â °ÍÀº column>=4ÀÎ »óÈ²¿¡¼­¸¸ °¡´ÉÇÏ°í, ³¡±îÁö µµ´ŞÇÑ °æ¿ì ÀÌ¹Ç·Î ¿À¸¥ÂÊ ³¡ÀÌ ¸·ÇôÀÖ´Ù.
+			right_block = true;
+		}
+		else {
+			if (map_temp[row][x] != color && map_temp[row][x] != 0) {		// x´Â ³¡ºÎºĞÀÌ¹Ç·Î ´Ù¸¥ µ¹·Î ¸·ÇôÀÖ´Ù´Â ¶æ
+				right_block = true;
+			}
+		}
+		if (left_block && right_block) {									// ¿À¸¥ÂÊ ¿ŞÂÊÀÌ µÑ ´Ù ¸·ÇôÀÖÀ¸¸é ÀÌ°ÍÀº Á¡¼ö°¡ ¾ø´Â »óÅÂ
+//			cnt = 0;														// °³¼± ÇÊ¿ä
+		}
+	}
+	return v[cnt];
+}
+
+int evaluate_diagonally_temp(int row, int column, int color) {				// ´ë°¢ Å½»ö °³¼±(°³¼±Àº µÆ´Âµ¥ È¿°ú°¡ ¾ø³×)
+
+	int v[5] = { 0,1,3,9,100 };
+	int value = 0;
+	int cnt = 0;
+	int nb = 0;
+	int y, x;
+
+	y = row;
+	x = column;
+
+	for (;y >= 1 && x >= 1 && nb < 4; y--, x--) {							// ÁÂ ´ë°¢¼±
+		nb++;
+		if (map_temp[y][x] == color) cnt++;
+		else if (map_temp[y][x] != 0) break;
+	}
+	bool top_block = false;
+	bool bottom_block = false;
+	if (cnt == 4) {
+		//		value += v[cnt];												// 4Ä­À» ¸¸µé¾ú´Ù.
+	}
+	else {
+		if (y == 0) bottom_block = true;										// ¹Ø¿¡°¡ ¸·ÇôÀÖ´Ù.
+		else if (nb < 4) bottom_block = true;									// ¹Ø¿¡°¡ ¸·ÇôÀÖ´Ù.
+		if (row == MAP_HEIGHT_SIZE) top_block = true;							// À§¿¡°¡ ¸·ÇôÀÖ´Ù.
+		else {
+			if (column != MAP_WIDTH_SIZE) {
+				if (map_temp[row + 1][column + 1] != color && map_temp[row + 1][column + 1] != 0) {		// À§¿¡°¡ ¸·ÇôÀÖ´Ù.
+					top_block = true;
+				}
+			}
+		}
+		if (top_block && bottom_block) cnt = 0;
+	}
+	value += v[cnt];
+
+
+
+	y = row;
+	x = column;
+	nb = 0;
+	cnt = 0;
+	top_block = bottom_block = false;
+	for (;y >= 1 && x <= MAP_WIDTH_SIZE && nb < 4; y--, x++) {								// ¿ì ´ë°¢¼± ÃÖ´ë 4Ä­ Å½»ö
+		nb++;
+		if (map_temp[y][x] == color) cnt++;
+		else if (map_temp[y][x] != 0) break;
+	}
+	if (cnt == 4) {
+		//		value += v[cnt];
+	}
+	else {
+		if (y == 0) bottom_block = true;
+		else if (nb < 4) bottom_block = true;
+		if (row == MAP_HEIGHT_SIZE) top_block = true;
+		else {
+			if (column != 1) {
+				if (map_temp[row + 1][column - 1] != color && map_temp[row + 1][column - 1] != 0) {
+					top_block = true;
+				}
+			}
+		}
+		if (top_block && bottom_block) cnt = 0;
+	}
+	return value + v[cnt];
+}
+
+int evaluate_board_state() {					// color ¸¦ ¹ŞÀ¸¸é + - ¸¦ °áÁ¤ÇØ¼­ ÀÌ±â°í Áö´Â°É ¼¼ºĞÈ­ ½ÃÅ³ ¼ö ÀÖÀ»±î? ¾Æ´Ï¸é È£ÃâÇÑ ºÎºĞ¿¡¼­ ¹Ù·Î °áÁ¤ÇØÁÙ¼ö ÀÖ´Â°Ç°¡?
+	int i, j;
+	int value_black = 0;
+	int value_white = 0;
+	for (i = 1; i <= MAP_WIDTH_SIZE; i++) {
+		if (map_temp[HEIGHT_TEMP[i]][i] == 1) {
+			value_black += evaluate_vertically_temp(i, 1);
+		}
+		else if (map_temp[HEIGHT_TEMP[i]][i] == 2) {
+			value_white += evaluate_vertically_temp(i, 2);
+		}
+	}
+	for (i = 1; i <= MAP_HEIGHT_SIZE; i++) {
+		for (j = 1; j <= MAP_WIDTH_SIZE; j++) {
+			if (map_temp[i][j] == 1) {
+				value_black += evaluate_horizontally_temp(i, j, 1);
+			}
+			else if (map_temp[i][j] == 2) {
+				value_white += evaluate_horizontally_temp(i, j, 2);
+			}
+		}
+	}
+
+	for (i = 1; i <= MAP_HEIGHT_SIZE; i++) {
+		for (j = 1; j <= MAP_WIDTH_SIZE; j++) {
+			if (map_temp[i][j] == 1) {			// ¼±°øÀÏ ¶§ Á¡¼ö °è»ê
+				value_black += evaluate_diagonally_temp(i, j, 1);
+			}
+			else if (map_temp[i][j] == 2) {
+				value_white += evaluate_diagonally_temp(i, j, 2);
+			}
+		}
+	}
+	return (value_black - value_white);
 }

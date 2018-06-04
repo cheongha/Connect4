@@ -1,5 +1,9 @@
 # Connect4
-2018 Korea Univ. AI Implementation Assignment
+2018 Korea Univ.
+
+Mid Term Project
+
+AI Implementation Assignment
 
 Team Name : 아버지날보고있다면정답을알려조
 
