@@ -7,11 +7,7 @@ AI Implementation Assignment
 
 Team Name : 아버지날보고있다면정답을알려조
 
-Team Member :
-		
-		Lee Jihwan
-	      
-		Kim Sunyoung
-	      
-		Kim Younghoon
+Team Member :	Lee Jihwan
+	     	Kim Seonyoung
+	     	Kim Younghoon
 
